@@ -14,6 +14,43 @@ name: "default"
 settings:
   enabled: true
 
+  # [v5.6 FEATURE] ARENA BASE HEALTH SYSTEM
+  # Sets base max HP for all players in this arena (survives totem pops, stacks with Shop HP)
+  base-health: 40.0
+  # Optional: Specific base HP per class (overrides general base-health)
+  base-health-per-class:
+    Tank: 60.0
+    Archer: 35.0
+    Mage: 30.0
+
+  # [v5.7 FEATURE] PER-ARENA ROGUELIKE UPGRADE SYSTEM OVERRIDE
+  # Set override-global to true if you want this specific arena to use its own upgrade rules.
+  upgrade-system:
+    override-global: false
+    enabled: true
+    mode: "INTERVAL" # Options: "INTERVAL", "SPECIFIC_WAVES", "STAGE_BASED"
+    trigger-every-waves: 5
+    specific-waves:
+      - 5
+      - 10
+      - 15
+      - 20
+    stage-triggers:
+      stage_1:
+        min-wave: 1
+        max-wave: 10
+        interval: 5
+      stage_2:
+        min-wave: 11
+        max-wave: 30
+        interval: 3
+    default-max-slots: 3
+    class-slots:
+      Tank: 4
+      Warrior: 3
+      Archer: 3
+      Mage: 2
+
   # [MỚI] ARENA LOCK: Require players to clear another arena first.
   # Leave blank ("") if this arena is unlocked by default.
   required-arena: ""

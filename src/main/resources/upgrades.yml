@@ -10,13 +10,34 @@
 
 settings:
   enabled: true
+  mode: "INTERVAL" # Options: "INTERVAL", "SPECIFIC_WAVES", "STAGE_BASED"
   trigger-every: 5
+  trigger-every-waves: 5
+  specific-waves:
+    - 5
+    - 10
+    - 15
+    - 20
+    - 25
+    - 30
+  stage-triggers:
+    stage_1:
+      min-wave: 1
+      max-wave: 10
+      interval: 5
+    stage_2:
+      min-wave: 11
+      max-wave: 30
+      interval: 3
   default-max-slots: 3
   class-slots:
     Knight: 3
+    Warrior: 3
     Archer: 3
     Alchemist: 4
     Juggernaut: 2
+    Tank: 4
+    Mage: 2
 
 upgrades:
   # ==========================================================
@@ -31,15 +52,15 @@ upgrades:
     slot: 1
     type: DAMAGE_MULTIPLIER
     max-level: 5
-    base-value: 1.1
-    increment: 0.05
+    base-value: 1.15
+    increment: 0.08
     lore:
       - '&7&m---------------------'
       - '&fInfuse your attacks with raw force.'
       - '&fIncreases all outgoing physical damage.'
       - '&fCurrent Bonus: &c+&e%current_value%%'
       - '&fNext Level: &c+&e%next_value%%'
-      - '&f&o(Resets when match ends)'
+      - '&e★ Tier Milestone (Lv.5): &fShockwave cleaves nearby mobs!'
       - '&7&m---------------------'
 
   critical_strike:
@@ -49,14 +70,15 @@ upgrades:
     slot: 2
     type: CRITICAL_CHANCE
     max-level: 5
-    base-value: 10.0
-    increment: 5.0
+    base-value: 12.0
+    increment: 6.0
     lore:
       - '&7&m---------------------'
       - '&fHone your precision to strike deadly blows.'
       - '&fGrants a chance to deal &c&lDOUBLE&f damage!'
       - '&fCurrent Chance: &c%current_value%%'
       - '&fNext Level: &c%next_value%%'
+      - '&e★ Tier Milestone (Lv.5): &fMega Crit deals 3.0x Damage!'
       - '&7&m---------------------'
 
   adrenaline_rush:
@@ -65,7 +87,7 @@ upgrades:
     weight: 45
     slot: 3
     type: HASTE_EFFECT
-    max-level: 2
+    max-level: 3
     base-value: 1.0
     increment: 1.0
     lore:
@@ -74,6 +96,7 @@ upgrades:
       - '&fIncreases your attack and weapon swing speed.'
       - '&fCurrent Haste Tier: &eLv.%current_value%'
       - '&fNext Tier: &eLv.%next_value%'
+      - '&e★ Tier Milestone (Lv.3): &fPermanent Speed I buff!'
       - '&7&m---------------------'
 
   # --- Nhóm Phòng Thủ (Góc Phải - Hàng 1) ---
@@ -84,14 +107,15 @@ upgrades:
     slot: 5
     type: MAX_HEALTH
     max-level: 5
-    base-value: 2.0
-    increment: 2.0
+    base-value: 4.0
+    increment: 3.0
     lore:
       - '&7&m---------------------'
       - '&fFortify your vitality with ancient titan blood.'
       - '&fPermanently increases your Maximum HP.'
       - '&fCurrent HP Bonus: &c+&e%current_value% HP'
       - '&fNext Level: &c+&e%next_value% HP'
+      - '&e★ Tier Milestone (Lv.5): &f+4.0 Heart Absorption at wave start!'
       - '&7&m---------------------'
 
   iron_skin:
@@ -101,14 +125,15 @@ upgrades:
     slot: 6
     type: DAMAGE_REDUCTION
     max-level: 4
-    base-value: 5.0
-    increment: 5.0
+    base-value: 8.0
+    increment: 6.0
     lore:
       - '&7&m---------------------'
       - '&fHardens your body against enemy strikes.'
       - '&fReduces incoming physical damage taken.'
       - '&fDamage Reduced: &b%current_value%%'
       - '&fNext Level: &b%next_value%%'
+      - '&e★ Tier Milestone (Lv.4): &fReduces knockback by 50%!'
       - '&7&m---------------------'
 
   phantom_barrier:
@@ -118,14 +143,15 @@ upgrades:
     slot: 7
     type: WAVE_SHIELD
     max-level: 4
-    base-value: 4.0
-    increment: 2.0
+    base-value: 6.0
+    increment: 3.0
     lore:
       - '&7&m---------------------'
       - '&fSummons a spectral barrier around you.'
       - '&fGrants extra Absorption HP at wave start.'
       - '&fCurrent Shield: &e%current_value% HP'
       - '&fNext Level: &e%next_value% HP'
+      - '&e★ Tier Milestone (Lv.4): &fReflects 15% projectile damage!'
       - '&7&m---------------------'
 
   # --- Nhóm Hồi Phục & Tốc Độ (Góc Trái - Hàng 2) ---
@@ -135,15 +161,16 @@ upgrades:
     weight: 30
     slot: 10
     type: LIFESTEAL
-    max-level: 3
-    base-value: 5.0
-    increment: 3.5
+    max-level: 5
+    base-value: 15.0
+    increment: 5.0
     lore:
       - '&7&m---------------------'
       - '&fCurse your blade with vampiric thirst.'
-      - '&fGrants a chance to siphon health on hit.'
+      - '&fSiphons 25% of Damage Dealt as HP on hit.'
       - '&fCurrent Chance: &c%current_value%%'
       - '&fNext Level: &c%next_value%%'
+      - '&e★ Tier Milestone (Lv.3+): &fOverheal becomes Absorption Shield!'
       - '&7&m---------------------'
 
   soul_harvester:
@@ -153,14 +180,15 @@ upgrades:
     slot: 11
     type: HEAL_ON_KILL
     max-level: 5
-    base-value: 1.0
-    increment: 1.0
+    base-value: 2.0
+    increment: 1.5
     lore:
       - '&7&m---------------------'
       - '&fAbsorb the essence of fallen foes.'
       - '&fRestores HP whenever you slay a monster.'
       - '&fCurrent Heal: &a+%current_value% HP'
       - '&fNext Level: &a+%next_value% HP'
+      - '&e★ Tier Milestone (Lv.5): &fSlaying bosses restores FULL HP!'
       - '&7&m---------------------'
 
   swift_wind:
@@ -170,14 +198,15 @@ upgrades:
     slot: 12
     type: SPEED_BOOST
     max-level: 3
-    base-value: 10.0
-    increment: 5.0
+    base-value: 15.0
+    increment: 8.0
     lore:
       - '&7&m---------------------'
       - '&fBlesses your steps with the gale of wind.'
       - '&fIncreases your overall movement speed.'
       - '&fSpeed Bonus: &b+%current_value%%'
       - '&fNext Level: &b+%next_value%%'
+      - '&e★ Tier Milestone (Lv.3): &fGrants permanent Jump Boost I!'
       - '&7&m---------------------'
 
   # --- Nhóm Rủi Ro & Tiện Ích (Góc Phải - Hàng 2) ---
@@ -188,8 +217,8 @@ upgrades:
     slot: 14
     type: ECO_MULTIPLIER
     max-level: 4
-    base-value: 25.0
-    increment: 25.0
+    base-value: 30.0
+    increment: 30.0
     lore:
       - '&7&m---------------------'
       - '&fTurn enemy blood into pure gold.'
@@ -205,8 +234,8 @@ upgrades:
     slot: 15
     type: GLASS_CANNON
     max-level: 3
-    base-value: 20.0
-    increment: 15.0
+    base-value: 25.0
+    increment: 20.0
     lore:
       - '&7&m---------------------'
       - '&fSacrifice safety for catastrophic power.'
@@ -214,6 +243,7 @@ upgrades:
       - '&c+15% &fmore damage from all sources!'
       - '&fCurrent DMG Boost: &c+%current_value%%'
       - '&fNext Level: &c+%next_value%%'
+      - '&e★ Tier Milestone (Lv.3): &f+50% Attack Speed bonus!'
       - '&7&m---------------------'
 
   gamblers_dice:
@@ -252,6 +282,113 @@ upgrades:
       - '&7&m---------------------'
       - '&fInstantly restores your health bar.'
       - '&fA vital lifesaver during boss encounters!'
+      - '&7&m---------------------'
+
+  # --- v5.2 NEW DIVERSE UPGRADES ---
+  bloodlust:
+    display-name: '&#FF3300&lBloodlust Spirit &8[Lv.%current_level%/%max_level%]'
+    material: REDSTONE_BLOCK
+    weight: 35
+    slot: 18
+    type: BLOODLUST
+    max-level: 5
+    base-value: 1.0
+    increment: 1.0
+    lore:
+      - '&7&m---------------------'
+      - '&fSlaying monsters grants temporary Attack Speed'
+      - '&f& Movement Speed stacks for &e5 seconds&f.'
+      - '&fCurrent Bonus: &c+&e%current_value% Stacks'
+      - '&fNext Level: &c+&e%next_value% Stacks'
+      - '&e★ Tier Milestone (Lv.5): &fFire explosion on kill!'
+      - '&7&m---------------------'
+
+  second_wind:
+    display-name: '&#00FFCC&lSecond Wind &8[Lv.%current_level%/%max_level%]'
+    material: TOTEM_OF_UNDYING
+    weight: 25
+    slot: 19
+    type: SECOND_WIND
+    max-level: 3
+    base-value: 1.0
+    increment: 1.0
+    lore:
+      - '&7&m---------------------'
+      - '&fWhen HP drops below &c25%&f, gain &bResistance II'
+      - '&f& &aRegeneration II &ffor 6 seconds. &8(60s Cooldown)'
+      - '&fCurrent Shield Tier: &eLv.%current_value%'
+      - '&fNext Tier: &eLv.%next_value%'
+      - '&e★ Tier Milestone (Lv.3): &fKnocks back nearby mobs!'
+      - '&7&m---------------------'
+
+  thorns_aura:
+    display-name: '&#FF9900&lSpike Retaliation &8[Lv.%current_level%/%max_level%]'
+    material: CACTUS
+    weight: 30
+    slot: 20
+    type: THORNS_AURA
+    max-level: 5
+    base-value: 10.0
+    increment: 5.0
+    lore:
+      - '&7&m---------------------'
+      - '&fReflects a percentage of incoming melee damage'
+      - '&fback at your attacker.'
+      - '&fCurrent Reflection: &c%current_value%%'
+      - '&fNext Level: &c%next_value%%'
+      - '&e★ Tier Milestone (Lv.5): &f25% chance to Stun attacker!'
+      - '&7&m---------------------'
+
+  elemental_infusion:
+    display-name: '&#9933FF&lElemental Strike &8[Lv.%current_level%/%max_level%]'
+    material: BLAZE_POWDER
+    weight: 30
+    slot: 24
+    type: ELEMENTAL_INFUSION
+    max-level: 5
+    base-value: 1.0
+    increment: 1.0
+    lore:
+      - '&7&m---------------------'
+      - '&fInfuses your weapon with Elemental Forces.'
+      - '&fApplies Fire, Frost, or Slowness to targets.'
+      - '&fCurrent Elemental Rank: &dTier %current_value%'
+      - '&fNext Rank: &dTier %next_value%'
+      - '&e★ Tier Milestone (Lv.5): &fLightning strikes on Crit!'
+      - '&7&m---------------------'
+
+  armor_piercing:
+    display-name: '&#CC0000&lArmor Shredder &8[Lv.%current_level%/%max_level%]'
+    material: ANVIL
+    weight: 30
+    slot: 25
+    type: ARMOR_PIERCING
+    max-level: 5
+    base-value: 8.0
+    increment: 4.0
+    lore:
+      - '&7&m---------------------'
+      - '&fBypasses monster natural armor and shields.'
+      - '&fConverts physical damage into True Damage.'
+      - '&fCurrent Armor Pen: &c%current_value%%'
+      - '&fNext Level: &c%next_value%%'
+      - '&7&m---------------------'
+
+  soul_orb:
+    display-name: '&#3399FF&lSoul Collector &8[Lv.%current_level%/%max_level%]'
+    material: EXPERIENCE_BOTTLE
+    weight: 35
+    slot: 26
+    type: SOUL_ORB
+    max-level: 5
+    base-value: 15.0
+    increment: 10.0
+    lore:
+      - '&7&m---------------------'
+      - '&fSlaying foes releases Soul Orbs on the ground.'
+      - '&fWalk over orbs to restore health and speed!'
+      - '&fDrop Chance: &b%current_value%%'
+      - '&fNext Level: &b%next_value%%'
       - '&7&m---------------------'
 
   # ==========================================================

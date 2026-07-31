@@ -1,9 +1,11 @@
 package vn.meowchan12.mobarenav2.arena;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.World;
 import org.bukkit.block.Chest;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -21,7 +23,7 @@ public class Arena {
 
     private Location p1, p2, lobby, arenaSpawn, spectatorSpawn;
     private final List<Location> spawnpoints = new ArrayList<>();
-    private final List<Location> supplypoints = new ArrayList<>(); // [MỚI] Tọa độ hòm thính
+    private final List<Location> supplypoints = new ArrayList<>();
     private final double spawnMinDistance = 5.0;
 
     private boolean isRunning = false;
@@ -108,6 +110,30 @@ public class Arena {
                 loc.getZ() >= minZ && loc.getZ() <= maxZ;
     }
 
+    // ==========================================
+    // [FIX BUG #2] HỆ THỐNG KHÓA CHUNK (CHUNK TICKET)
+    // ==========================================
+    private void setChunksLocked(MobArenav2 plugin, boolean locked) {
+        if (p1 == null || p2 == null || p1.getWorld() == null) return;
+
+        World world = p1.getWorld();
+        int minX = Math.min(p1.getBlockX(), p2.getBlockX()) >> 4;
+        int minZ = Math.min(p1.getBlockZ(), p2.getBlockZ()) >> 4;
+        int maxX = Math.max(p1.getBlockX(), p2.getBlockX()) >> 4;
+        int maxZ = Math.max(p1.getBlockZ(), p2.getBlockZ()) >> 4;
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                Chunk chunk = world.getChunkAt(x, z);
+                if (locked) {
+                    chunk.addPluginChunkTicket(plugin);
+                } else {
+                    chunk.removePluginChunkTicket(plugin);
+                }
+            }
+        }
+    }
+
     public void checkAndStart(MobArenav2 plugin) {
         if (isRunning) return;
 
@@ -124,8 +150,32 @@ public class Arena {
             return;
         }
 
+        // [FIX BUG #2] Khóa toàn bộ Chunk thuộc khu vực sàn đấu vào RAM
+        setChunksLocked(plugin, true);
+
+        for (UUID uuid : getActivePlayers()) {
+            Player p = Bukkit.getPlayer(uuid);
+            if (p != null && arenaSpawn != null) {
+                p.teleport(arenaSpawn);
+            }
+        }
+
+        broadcastMessage("§a[MobArenav2] The arena battle has begun!");
+
         clearLeftoverEntities(plugin);
         plugin.getWaveManager().startArena(this);
+    }
+
+    public void clearActiveSupplies() {
+        for (Location loc : activeSupplies) {
+            if (loc != null && loc.getBlock().getType() == Material.CHEST) {
+                if (loc.getBlock().getState() instanceof Chest chest) {
+                    chest.getInventory().clear();
+                }
+                loc.getBlock().setType(Material.AIR);
+            }
+        }
+        activeSupplies.clear();
     }
 
     public void broadcastMessage(String message) {
@@ -250,10 +300,6 @@ public class Arena {
             }
             plugin.getConfigManager().saveArenaCoords(this);
 
-            // ==========================================
-            // [MỚI] ARENA LOCK SYSTEM (MỞ KHÓA MAP)
-            // Nếu người chơi chiến thắng (sống sót tới cuối), ghi nhận mở khóa!
-            // ==========================================
             boolean isVictory = !getActivePlayers().isEmpty();
             if (isVictory) {
                 for (UUID uuid : playerProfiles.keySet()) {
@@ -310,18 +356,11 @@ public class Arena {
             if (mob != null && mob.isValid()) mob.remove();
         }
         activeMobs.clear();
-
         clearLeftoverEntities(plugin);
+        clearActiveSupplies();
 
-        for (Location loc : activeSupplies) {
-            if (loc != null && loc.getBlock().getType() == Material.CHEST) {
-                if (loc.getBlock().getState() instanceof Chest chest) {
-                    chest.getInventory().clear();
-                }
-                loc.getBlock().setType(Material.AIR);
-            }
-        }
-        activeSupplies.clear();
+        // [FIX BUG #2] Hủy khóa Chunk để giải phóng RAM cho Server
+        setChunksLocked(plugin, false);
 
         for (ArenaPlayerProfile profile : playerProfiles.values()) {
             if (profile.getScoreboard() != null) {

@@ -67,6 +67,16 @@ public class ArenaCommand implements TabExecutor {
         String subCommand = args[0].toLowerCase();
 
         switch (subCommand) {
+            case "shop" -> {
+                if (args.length >= 2) {
+                    vn.meowchan12.mobarenav2.shop.gui.ShopGUI.openCategoryShop(player, args[1], plugin);
+                } else {
+                    vn.meowchan12.mobarenav2.shop.gui.ShopGUI.openMainShop(player, plugin);
+                }
+            }
+            case "stats" -> {
+                handleStatsCommand(player, args);
+            }
             case "upgrades" -> {
                 UpgradeGUI.openPreview(player, plugin);
             }
@@ -206,13 +216,6 @@ public class ArenaCommand implements TabExecutor {
 
                     profile.setReady(true);
                     arena.broadcastMessage("§a[MobArenav2] §e" + player.getName() + " §ais ready!");
-
-                    if (arena.getArenaSpawn() != null) {
-                        player.teleport(arena.getArenaSpawn());
-                    } else {
-                        player.sendMessage("§cWarning: Arena spawn is not set properly!");
-                    }
-
                     arena.checkAndStart(plugin);
                 }
             }
@@ -245,7 +248,7 @@ public class ArenaCommand implements TabExecutor {
                 }
             }
 
-            case "setup", "setp1", "setp2", "setspectator", "savearena", "save", "reload", "tp", "supply", "inv" -> {
+            case "setup", "setp1", "setp2", "setspectator", "savearena", "save", "reload", "tp", "supply", "inv", "setupclass", "skipwave" -> {
                 if (!player.hasPermission("mobarenav2.admin")) {
                     player.sendMessage("§cYou do not have permission to use admin commands.");
                     return true;
@@ -259,6 +262,31 @@ public class ArenaCommand implements TabExecutor {
 
     private void handleAdminCommands(Player player, String subCommand, String[] args) {
         switch (subCommand) {
+            case "skipwave" -> {
+                if (args.length < 3) {
+                    player.sendMessage("§cUsage: /ma skipwave <arena> <wave>");
+                    return;
+                }
+                Arena arena = arenaManager.getArena(args[1]);
+                if (arena == null) {
+                    player.sendMessage("§cArena not found!");
+                    return;
+                }
+                if (!arena.isRunning()) {
+                    player.sendMessage("§cThis arena is not currently running!");
+                    return;
+                }
+                int targetWave;
+                try {
+                    targetWave = Integer.parseInt(args[2]);
+                } catch (NumberFormatException e) {
+                    player.sendMessage("§cInvalid wave number format!");
+                    return;
+                }
+
+                plugin.getWaveManager().forceSkipWave(arena, targetWave);
+                player.sendMessage("§a[MobArenav2] Successfully forced arena §e" + arena.getName() + " §atoskip to wave §e" + targetWave + "!");
+            }
             case "inv" -> {
                 if (args.length < 2) {
                     player.sendMessage("§cUsage: /ma inv <player>");
@@ -275,6 +303,19 @@ public class ArenaCommand implements TabExecutor {
                 } else {
                     player.sendMessage("§c[MobArenav2] The Inventory Backup System is currently disabled or failed to load!");
                 }
+            }
+
+            case "setupclass" -> {
+                if (args.length < 2) {
+                    player.sendMessage("§cUsage: /ma setupclass <class_name>");
+                    return;
+                }
+                String className = args[1];
+                if (!plugin.getClassManager().getAvailableClasses().contains(className)) {
+                    plugin.getConfigManager().getClasses().set("classes." + className + ".limit", -1);
+                    player.sendMessage("§a[MobArenav2] Creating new class profile: §e" + className);
+                }
+                vn.meowchan12.mobarenav2.arena.ClassSetupGUI.open(player, plugin, className);
             }
 
             case "save" -> {
@@ -413,10 +454,90 @@ public class ArenaCommand implements TabExecutor {
         }
     }
 
+    private void handleStatsCommand(Player player, String[] args) {
+        if (args.length < 2) {
+            player.sendMessage("§cUsage: /ma stats <reload|reset|add|remove> [player] [item_id] [amount]");
+            return;
+        }
+
+        String action = args[1].toLowerCase();
+
+        switch (action) {
+            case "reload" -> {
+                Player target = (args.length >= 3) ? Bukkit.getPlayer(args[2]) : player;
+                if (target == null || !target.isOnline()) {
+                    player.sendMessage("§cPlayer not found!");
+                    return;
+                }
+                if (plugin.getShopManager() != null) {
+                    plugin.getShopManager().applyPermanentAttributesToPlayer(target);
+                    player.sendMessage("§a[MobArenav2] Successfully reloaded permanent shop stats for §e" + target.getName());
+                }
+            }
+            case "reset" -> {
+                if (!player.hasPermission("mobarenav2.admin")) {
+                    player.sendMessage("§cYou do not have permission to reset player stats!");
+                    return;
+                }
+                if (args.length < 3) {
+                    player.sendMessage("§cUsage: /ma stats reset <player>");
+                    return;
+                }
+                Player target = Bukkit.getPlayer(args[2]);
+                if (target == null || !target.isOnline()) {
+                    player.sendMessage("§cPlayer not found!");
+                    return;
+                }
+                if (plugin.getShopManager() != null) {
+                    vn.meowchan12.mobarenav2.shop.model.PlayerShopData data = plugin.getShopManager().getPlayerData(target.getUniqueId());
+                    if (data != null) {
+                        data.getItemLevels().clear();
+                        plugin.getShopManager().savePlayerDataToDisk(target.getUniqueId());
+                        plugin.getShopManager().applyPermanentAttributesToPlayer(target);
+                        player.sendMessage("§a[MobArenav2] Successfully reset all shop stats for §e" + target.getName());
+                    }
+                }
+            }
+            case "add", "remove" -> {
+                if (!player.hasPermission("mobarenav2.admin")) {
+                    player.sendMessage("§cYou do not have permission to modify player stats!");
+                    return;
+                }
+                if (args.length < 5) {
+                    player.sendMessage("§cUsage: /ma stats " + action + " <player> <item_id> <amount>");
+                    return;
+                }
+                Player target = Bukkit.getPlayer(args[2]);
+                if (target == null || !target.isOnline()) {
+                    player.sendMessage("§cPlayer not found!");
+                    return;
+                }
+                String itemId = args[3].toLowerCase();
+                int amount = 1;
+                try { amount = Integer.parseInt(args[4]); } catch (NumberFormatException ignored) {}
+
+                if (plugin.getShopManager() != null) {
+                    vn.meowchan12.mobarenav2.shop.model.PlayerShopData data = plugin.getShopManager().getPlayerData(target.getUniqueId());
+                    if (data != null) {
+                        int curLvl = data.getItemLevel(itemId);
+                        int newLvl = action.equals("add") ? (curLvl + amount) : Math.max(0, curLvl - amount);
+                        data.setItemLevel(itemId, newLvl);
+                        plugin.getShopManager().savePlayerDataToDisk(target.getUniqueId());
+                        plugin.getShopManager().applyPermanentAttributesToPlayer(target);
+                        player.sendMessage("§a[MobArenav2] Set §e" + itemId + " §alevel to §b" + newLvl + " §afor §e" + target.getName());
+                    }
+                }
+            }
+            default -> player.sendMessage("§cUnknown stats action! Use /ma stats <reload|reset|add|remove>");
+        }
+    }
+
     private void sendHelpMessage(Player player) {
         player.sendMessage("§8§m----------------------------------");
         player.sendMessage("§c§l MobArenav2 §7- Commands");
         player.sendMessage("§a /ma join <arena> §7- Join an arena");
+        player.sendMessage("§a /ma shop [category] §7- Open MobArena Global Shop");
+        player.sendMessage("§a /ma stats <reload|reset|add|remove> §7- Manage permanent shop stats");
         player.sendMessage("§a /ma class §7- Select your combat class");
         player.sendMessage("§a /ma ready §7- Mark yourself as ready");
         player.sendMessage("§a /ma upgrades §7- Preview all available upgrades");
@@ -428,11 +549,13 @@ public class ArenaCommand implements TabExecutor {
             player.sendMessage("§c /ma inv <player> §7- View & inspect a player's backup inventory");
             player.sendMessage("§c /ma tp <arena> §7- Teleport to an arena");
             player.sendMessage("§c /ma setup <arena> §7- Enter/Exit visual setup mode");
+            player.sendMessage("§c /ma setupclass <class> §7- Setup a class via GUI");
             player.sendMessage("§c /ma setspectator <arena> §7- Set spectator spawn location");
             player.sendMessage("§c /ma save <arena> §7- Force save arena coordinates");
             player.sendMessage("§c /ma reload §7- Reload all configuration files");
             player.sendMessage("§c /ma savearena <arena> §7- Backup arena blocks to file");
             player.sendMessage("§c /ma supply <create|edit|delete|reset> <id> §7- Manage supply drops");
+            player.sendMessage("§c /ma skipwave <arena> <wave> §7- Skip/jump to a specific wave");
         }
         player.sendMessage("§8§m----------------------------------");
     }
@@ -442,19 +565,24 @@ public class ArenaCommand implements TabExecutor {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
-            List<String> subCommands = new ArrayList<>(Arrays.asList("join", "leave", "class", "ready", "spec", "list", "top", "upgrades"));
+            List<String> subCommands = new ArrayList<>(Arrays.asList("join", "leave", "shop", "stats", "class", "ready", "spec", "list", "top", "upgrades"));
             if (sender.hasPermission("mobarenav2.admin")) {
-                subCommands.addAll(Arrays.asList("setup", "setp1", "setp2", "setspectator", "savearena", "save", "reload", "tp", "supply", "inv"));
+                subCommands.addAll(Arrays.asList("setup", "setp1", "setp2", "setspectator", "savearena", "save", "reload", "tp", "supply", "inv", "setupclass", "skipwave"));
             }
             StringUtil.copyPartialMatches(args[0], subCommands, completions);
         } else if (args.length == 2) {
             String sub = args[0].toLowerCase();
-            if (Arrays.asList("join", "spec", "tp", "save", "savearena", "setup", "setspectator", "top").contains(sub)) {
+            if (Arrays.asList("join", "spec", "tp", "save", "savearena", "setup", "setspectator", "top", "skipwave").contains(sub)) {
                 List<String> arenaNames = arenaManager.getAllArenas().stream().map(Arena::getName).collect(Collectors.toList());
                 StringUtil.copyPartialMatches(args[1], arenaNames, completions);
+            } else if (sub.equals("stats")) {
+                List<String> statsActions = Arrays.asList("reload", "reset", "add", "remove");
+                StringUtil.copyPartialMatches(args[1], statsActions, completions);
             } else if (sub.equals("supply") && sender.hasPermission("mobarenav2.admin")) {
                 List<String> supplyActions = Arrays.asList("create", "delete", "reset", "edit");
                 StringUtil.copyPartialMatches(args[1], supplyActions, completions);
+            } else if (sub.equals("setupclass") && sender.hasPermission("mobarenav2.admin")) {
+                StringUtil.copyPartialMatches(args[1], new ArrayList<>(plugin.getClassManager().getAvailableClasses()), completions);
             } else if (sub.equals("inv") && sender.hasPermission("mobarenav2.admin")) {
                 return null;
             }

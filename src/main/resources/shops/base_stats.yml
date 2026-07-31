@@ -1,0 +1,86 @@
+# ==========================================================
+# MOBARENA SHOP - PERMANENT BASE STATS
+# ----------------------------------------------------------
+# Upgrades in this file modify Bukkit attributes permanently
+# inside MobArena matches. They DO NOT lose stats on Totem pop!
+# ==========================================================
+
+category:
+  id: "base_stats"
+  display-name: "&#55FF55&lPERMANENT BASE STATS"
+  material: NETHERITE_CHESTPLATE
+  slot: 20
+  lore:
+    - "&7&m---------------------"
+    - "&fUpgrade permanent base attributes."
+    - "&b&l✦ IMMUNE TO TOTEM POP WIPES!"
+    - "&7&m---------------------"
+
+items:
+  perm_hp_boost:
+    category: "base_stats"
+    slot: 20
+    display-name: "&#55FF55&lHeart of Steel &8[+2.0 HP]"
+    material: RED_CONCRETE
+    lore:
+      - "&7&m---------------------"
+      - "&fPermanently increases your Base Max HP inside MobArena."
+      - "&b&l✦ Remains active even after Totem of Undying pops!"
+      - "&fCurrent HP Bonus: &a+%current_value% HP"
+      - "&fNext Level HP Bonus: &a+%next_value% HP"
+      - "&7&m---------------------"
+    price-type: VAULT
+    base-cost: 100000.0
+    cost-multiplier: 1.6
+    max-level: 10
+    attribute: GENERIC_MAX_HEALTH
+    base-value: 2.0
+    increment: 2.0
+    output-actions:
+      - "message: &a[MobArena Shop] Upgraded Heart of Steel to Level %level%!"
+      - "sound: ENTITY_PLAYER_LEVELUP 1.0 1.5"
+
+  perm_armor_boost:
+    category: "base_stats"
+    slot: 22
+    display-name: "&#AAAAAA&lIron Bulwark &8[+1.5 Armor]"
+    material: IRON_CHESTPLATE
+    lore:
+      - "&7&m---------------------"
+      - "&fPermanently increases your Base Armor points inside MobArena."
+      - "&b&l✦ Hardens your defense against mob physical strikes!"
+      - "&fCurrent Armor Bonus: &b+%current_value% Armor"
+      - "&fNext Level Armor Bonus: &b+%next_value% Armor"
+      - "&7&m---------------------"
+    price-type: VAULT
+    base-cost: 150000.0
+    cost-multiplier: 1.8
+    max-level: 5
+    attribute: GENERIC_ARMOR
+    base-value: 1.5
+    increment: 1.5
+    output-actions:
+      - "message: &a[MobArena Shop] Upgraded Iron Bulwark to Level %level%!"
+      - "sound: ITEM_ARMOR_EQUIP_IRON 1.0 1.2"
+
+  perm_damage_boost:
+    category: "base_stats"
+    slot: 24
+    display-name: "&#FF5555&lTitan Strength &8[+1.5 DMG]"
+    material: NETHERITE_SWORD
+    lore:
+      - "&7&m---------------------"
+      - "&fPermanently increases your Base Melee Damage inside MobArena."
+      - "&fCurrent Damage Bonus: &c+%current_value% DMG"
+      - "&fNext Level Damage Bonus: &c+%next_value% DMG"
+      - "&7&m---------------------"
+    price-type: VAULT
+    base-cost: 200000.0
+    cost-multiplier: 2.0
+    max-level: 5
+    attribute: GENERIC_ATTACK_DAMAGE
+    base-value: 1.5
+    increment: 1.5
+    output-actions:
+      - "message: &a[MobArena Shop] Upgraded Titan Strength to Level %level%!"
+      - "sound: ENTITY_ZOMBIE_ATTACK_IRON_DOOR 1.0 1.5"

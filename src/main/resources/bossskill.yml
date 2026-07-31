@@ -6,7 +6,8 @@ earthquake:
   type: AREA_DAMAGE
   message: "&c&l[EARTHQUAKE] &4%boss% &eslams the ground with &c%skill%&e!"
   radius: 6.0
-  damage: 8.0
+  damage: 12.0
+  armor-penetration: 0.90 # 90% armor penetration (True Damage)
 
 gravity_pull:
   display-name: "Gravity Void"
@@ -77,10 +78,16 @@ boss_freeze:
   display-name: "FREEZE"
   type: FREEZE
   message: "&b&l[FROST] &3%boss% &efreezes the arena with &b%skill%&e!"
-  freeze-time: 3
-  hp-loss-percent: 35.0
+  freeze-time: 4
+  min-range: 32.0
+  max-range: 64.0
+  hp-loss-percent-min: 35.0
+  hp-loss-percent-max: 40.0
   after-effects:
-    - "slowness:300:1"
+    - "slowness:200:2"
+    - "poison:160:1"
+    - "weakness:160:1"
+    - "wither:120:1"
   cooldown: 25
 
 # ==========================================
@@ -103,7 +110,8 @@ earthquake_smash:
   radius: 8.0
   jump-velocity: 1.5
   knockup-power: 1.2
-  damage: 10.0
+  damage: 15.0
+  armor-penetration: 0.90 # 90% armor penetration (True Damage)
   cooldown: 25
 
 toxic_nova:
@@ -135,11 +143,13 @@ dash_and_ranged:
   message: "&b&l[AGILITY] &3%boss% &edashes into position with &b%skill%&e!"
   dash:
     power: 2.5
+    max-targets: 2
     invulnerable-duration: 3
   ranged-stance:
     duration: 10
     max-target-distance: 20.0
     attack-interval: 1.0
+    damage: 8.0
   cooldown: 45
 
 invis_teleporter:
@@ -158,6 +168,9 @@ spammer_bow:
   type: SPAMMER_BOW
   message: "&c&l[BARRAGE] &4%boss% &efires a relentless &c%skill%&e!"
   duration: 6
+  damage: 6.0
+  explosion-radius: 3.0
+  true-damage-percent: 0.80
   attack-interval: 1.5
   guaranteed-hit: true
   knockback-force: 1.2
@@ -172,7 +185,8 @@ saitama_punch:
   type: SAITAMA_PUNCH
   message: "&4&l[FATAL STRIKE] &c%boss% &ereadies a devastating &4%skill%&e!"
   duration: 5
-  true-damage: 5.0
+  damage: 25.0
+  armor-penetration: 0.90 # 90% armor penetration (True Damage)
   cooldown: 25
 
 lifesteal_aura:
@@ -184,3 +198,57 @@ lifesteal_aura:
     min: 1.0
     max: 1.5
   cooldown: 30
+
+# ==========================================
+# [v5.6 NEW] Special Boss Skills
+# ==========================================
+soul_drain:
+  display-name: "Soul Drain"
+  type: SOUL_DRAIN
+  message: "&5&l[DRAIN] &d%boss% &edrains the souls of surrounding players!"
+  radius: 10.0
+  drain-percent: 10.0
+  heal-multiplier: 1.5
+  cooldown: 30
+
+shadow_clone:
+  display-name: "Shadow Clones"
+  type: SHADOW_CLONE
+  message: "&8&l[CLONE] &7%boss% &espawns shadow illusions to confuse prey!"
+  clone-count: 3
+  clone-lifespan: 8
+  clone-damage: 3.0
+  clone-mob-type: "ZOMBIE"
+  cooldown: 40
+
+cursed_ground:
+  display-name: "Cursed Ground"
+  type: CURSED_GROUND
+  message: "&4&l[CURSE] &c%boss% &ecurses the earth beneath your feet!"
+  radius: 6.0
+  damage-per-tick: 3.0
+  duration: 8
+  effects:
+    - "wither:60:1"
+    - "slowness:60:1"
+  cooldown: 35
+
+berserker_charge:
+  display-name: "Berserker Charge"
+  type: BERSERKER_CHARGE
+  message: "&c&l[CHARGE] &4%boss% &echarges relentlessly at distant prey!"
+  damage: 12.0
+  charge-speed: 2.0
+  path-damage: 4.0
+  cooldown: 25
+
+void_prison:
+  display-name: "Void Prison"
+  type: VOID_PRISON
+  message: "&5&l[PRISON] &d%boss% &etraps a player in a void barrier cage!"
+  duration: 5
+  damage: 8.0
+  effects:
+    - "blindness:100:1"
+    - "slowness:100:2"
+  cooldown: 45

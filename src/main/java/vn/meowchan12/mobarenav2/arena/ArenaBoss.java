@@ -6,6 +6,7 @@ import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -15,13 +16,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class ArenaBoss {
 
     private final MobArenav2 plugin;
     private final Arena arena;
-    private final LivingEntity entity;
+    private LivingEntity entity; // Cập nhật có thể chỉnh sửa
+    private final UUID bossUUID; // [FIX BUG #2] Sử dụng UUID làm gốc
     private final String displayName;
 
     private BossBar bossBar;
@@ -36,6 +39,7 @@ public class ArenaBoss {
         this.plugin = plugin;
         this.arena = arena;
         this.entity = entity;
+        this.bossUUID = entity.getUniqueId(); // Lưu lại UUID gốc
         this.displayName = displayName != null ? displayName.replace("&", "§") : "Boss";
 
         if (showNameTag) {
@@ -50,20 +54,17 @@ public class ArenaBoss {
             }
         }
 
-        // --- THUẬT TOÁN ĐỌC SKILL THÔNG MINH MỚI ---
         if (skills != null) {
             for (String skillData : skills) {
                 String[] parts = skillData.split(":");
                 String skillId = parts[0].trim();
-                int cooldownTicks = 20 * 20; // Mặc định 20 giây nếu không tìm thấy cấu hình
+                int cooldownTicks = 20 * 20;
 
                 if (parts.length == 2) {
-                    // Nếu user ghi rõ cooldown (VD: earthquake:15)
                     try {
                         cooldownTicks = (int) (Double.parseDouble(parts[1].trim()) * 20);
                     } catch (NumberFormatException ignored) {}
                 } else {
-                    // Tự động đối chiếu và lấy cooldown từ bossskill.yml
                     ConfigurationSection skillCfg = plugin.getBossManager().getSkillsConfig().getConfigurationSection(skillId);
                     if (skillCfg != null && skillCfg.contains("cooldown")) {
                         cooldownTicks = skillCfg.getInt("cooldown") * 20;
@@ -71,7 +72,6 @@ public class ArenaBoss {
                 }
 
                 maxCooldowns.put(skillId, cooldownTicks);
-                // Tạo độ trễ ngẫu nhiên (3-8 giây) cho lần tung chiêu đầu tiên để tránh Boss xả hết skill cùng lúc
                 currentCooldowns.put(skillId, ThreadLocalRandom.current().nextInt(60, 160));
             }
         }
@@ -87,10 +87,20 @@ public class ArenaBoss {
         new BukkitRunnable() {
             @Override
             public void run() {
-                if (entity == null || entity.isDead() || !entity.isValid() || !arena.isRunning()) {
+                // [FIX BUG #2] Tìm kiếm lại Entity dựa trên UUID nếu bị mất do Chunk
+                Entity currentEntity = Bukkit.getEntity(bossUUID);
+                if (currentEntity instanceof LivingEntity) {
+                    entity = (LivingEntity) currentEntity;
+                }
+
+                if (entity == null || entity.isDead() || !arena.isRunning()) {
                     cleanup();
                     this.cancel();
                     return;
+                }
+
+                if (!entity.isValid()) {
+                    return; // Chờ Chunk Load xong, không được HỦY vòng lặp.
                 }
 
                 double maxHealth = 100.0;

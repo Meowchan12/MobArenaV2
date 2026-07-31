@@ -1,0 +1,816 @@
+# ========================================================================
+# MOB ARENA V2 - DEFAULT ARENA CONFIGURATION
+# ------------------------------------------------------------------------
+# This is the master template file. You can duplicate this file to create
+# new arenas (e.g., map1.yml, map2.yml).
+#
+# IMPORTANT: Use standard YAML formatting (2 spaces per indentation).
+# ========================================================================
+
+# ==========================================
+# AREA 1: GENERAL SETTINGS
+# ==========================================
+name: default
+settings:
+  enabled: true
+  required-arena: stage2
+  
+  # The final wave of the normal game. Once completed, the Voting Phase
+  # for Endless Mode will begin.
+  max-waves: 100
+  
+  # Economy integration (Requires Vault)
+  entry-fee:
+    enabled: false
+    type: VAULT
+    amount: 100.0
+  
+  rules:
+    mob-drop: false
+    player-pvp: false
+    block-break: true
+    block-place: true
+    item-drop: true
+    allow-commands: false
+    command-whitelist:
+    - /ma leave
+    - /ma class
+  
+  wave-conditions:
+    # If true, the next wave will NOT start until all mobs are killed.
+    clear-mob-before-next-wave: true
+    clear-boss-before-next-wave: true
+    # Delay (in seconds) before the next wave spawns.
+    next-wave: 6.0
+  
+  # ----------------------------------------
+  # CONFIGURABLE ANNOUNCER
+  # ----------------------------------------
+  # Placeholders available:
+  # %arena%       : Arena Name
+  # %wave%        : Current Wave Reached
+  # %max_wave%    : Maximum wave defined in settings
+  # %top1_player% : MVP Name (%top2_player%, %top3_player% also available)
+  # %top1_kills%  : MVP Kills
+  # %top1_class%  : MVP Class Name
+  announcer:
+    announce-when-arena-ends: true
+    messages:
+      victory:
+      - '&e=========================================='
+      - '&a&lVICTORY! &fArena &e%arena% &fhas been cleared!'
+      - '&7Reached Wave: &b%wave%&7/&b%max_wave%'
+      - ''
+      - '&e&lTOP MVPs:'
+      - ' &61. &f%top1_player% &7- &c%top1_kills% Kills &8(%top1_class%)'
+      - ' &62. &f%top2_player% &7- &c%top2_kills% Kills &8(%top2_class%)'
+      - ' &63. &f%top3_player% &7- &c%top3_kills% Kills &8(%top3_class%)'
+      - '&e=========================================='
+      defeat:
+      - '&e=========================================='
+      - '&c&lMATCH OVER! &fArena &e%arena%'
+      - '&7Reached Wave: &b%wave%'
+      - ''
+      - '&e&lTOP MVPs:'
+      - ' &61. &f%top1_player% &7- &c%top1_kills% Kills &8(%top1_class%)'
+      - ' &62. &f%top2_player% &7- &c%top2_kills% Kills &8(%top2_class%)'
+      - ' &63. &f%top3_player% &7- &c%top3_kills% Kills &8(%top3_class%)'
+      - '&e=========================================='
+  
+  # ----------------------------------------
+  # HARDCORE MECHANICS: ORBITAL STRIKE
+  # ----------------------------------------
+  # Randomly targets players with a deadly lightning strike during combat.
+  hardcore-mechanics:
+    lightning-strike:
+      enabled: true
+      interval: 15 # Triggers every 15 seconds
+      strikes-per-wave:
+        min: 1
+        max: 3 # Spawns 1 to 3 strikes per interval
+      damage:
+        min: 8.0
+        max: 20.0 # True damage dealt
+        radius: 5.0 # AoE explosion radius
+      phases: # Phases in seconds (1.0 = 20 ticks)
+        silent-aim: 1.0 # Invisible tracking phase
+        tracking-min: 1.0 # Minimum red warning circle duration
+        tracking-max: 2.0 # Maximum red warning circle duration
+        lock-on: 0.5 # Green circle lock-on time (dash away now!)
+
+# ==========================================
+# AREA 2: MAP COORDINATES
+# ==========================================
+# It is highly recommended NOT to edit this manually.
+# Please use the in-game setup commands (e.g. /ma setup <arena>).
+coords:
+  p1: 1388.0,-41.0,-1537.0,0.0,0.0,finalstage3
+  p2: 1590.0,23.0,-1320.0,0.0,0.0,finalstage3
+  lobby: 53.20427783118309,3.621442884730549,47.648758134827936,-98.24928,62.011536,finalstage3
+  arena: 1483.185269290207,-32.0,-1424.5598151057993,-159.14886,61.088852,finalstage3
+  spectator: 1486.0831084433594,25.0,-1425.4744392703135,-90.25256,33.71559,finalstage3
+  spawnpoints:
+    '1': 1483.5,-32.0,-1357.5,0.0,0.0,finalstage3
+    '2': 1475.5,-32.0,-1369.5,0.0,0.0,finalstage3
+    '3': 1488.5,-32.0,-1370.5,0.0,0.0,finalstage3
+    '4': 1500.5,-32.0,-1375.5,0.0,0.0,finalstage3
+    '5': 1506.5,-32.0,-1377.5,0.0,0.0,finalstage3
+    '6': 1512.5,-32.0,-1381.5,0.0,0.0,finalstage3
+    '7': 1522.5,-32.0,-1390.5,0.0,0.0,finalstage3
+    '8': 1526.5,-32.0,-1394.5,0.0,0.0,finalstage3
+    '9': 1532.5,-32.0,-1401.5,0.0,0.0,finalstage3
+    '10': 1535.5,-32.0,-1415.5,0.0,0.0,finalstage3
+    '11': 1538.5,-32.0,-1420.5,0.0,0.0,finalstage3
+    '12': 1540.5,-32.0,-1428.5,0.0,0.0,finalstage3
+    '13': 1534.5,-32.0,-1440.5,0.0,0.0,finalstage3
+    '14': 1534.5,-32.0,-1445.5,0.0,0.0,finalstage3
+    '15': 1531.5,-32.0,-1460.5,0.0,0.0,finalstage3
+    '16': 1517.5,-32.0,-1463.5,0.0,0.0,finalstage3
+    '17': 1517.5,-32.0,-1471.5,0.0,0.0,finalstage3
+    '18': 1504.5,-32.0,-1478.5,0.0,0.0,finalstage3
+    '19': 1491.5,-32.0,-1474.5,0.0,0.0,finalstage3
+    '20': 1484.5,-32.0,-1480.5,0.0,0.0,finalstage3
+    '21': 1472.5,-32.0,-1482.5,0.0,0.0,finalstage3
+    '22': 1466.5,-32.0,-1476.5,0.0,0.0,finalstage3
+    '23': 1461.5,-32.0,-1475.5,0.0,0.0,finalstage3
+    '24': 1445.5,-32.0,-1472.5,0.0,0.0,finalstage3
+    '25': 1444.5,-32.0,-1460.5,0.0,0.0,finalstage3
+    '26': 1440.5,-32.0,-1457.5,0.0,0.0,finalstage3
+    '27': 1429.5,-32.0,-1445.5,0.0,0.0,finalstage3
+    '28': 1431.5,-32.0,-1433.5,0.0,0.0,finalstage3
+    '29': 1426.5,-32.0,-1426.5,0.0,0.0,finalstage3
+    '30': 1425.5,-32.0,-1415.5,0.0,0.0,finalstage3
+    '31': 1431.5,-32.0,-1408.5,0.0,0.0,finalstage3
+    '32': 1433.5,-32.0,-1402.5,0.0,0.0,finalstage3
+    '33': 1432.5,-32.0,-1392.5,0.0,0.0,finalstage3
+    '34': 1448.5,-32.0,-1385.5,0.0,0.0,finalstage3
+    '35': 1451.5,-32.0,-1380.5,0.0,0.0,finalstage3
+    '36': 1461.5,-32.0,-1372.5,0.0,0.0,finalstage3
+  supplypoints:
+    '1': 1467.5,-32.0,-1452.5,0.0,0.0,finalstage3
+    '2': 1483.5,-32.0,-1457.5,0.0,0.0,finalstage3
+    '3': 1499.5,-32.0,-1453.5,0.0,0.0,finalstage3
+    '4': 1520.5,-32.0,-1440.5,0.0,0.0,finalstage3
+    '5': 1525.5,-32.0,-1420.5,0.0,0.0,finalstage3
+    '6': 1513.5,-32.0,-1403.5,0.0,0.0,finalstage3
+    '7': 1495.5,-32.0,-1389.5,0.0,0.0,finalstage3
+    '8': 1475.5,-32.0,-1380.5,0.0,0.0,finalstage3
+
+# ==========================================
+# AREA 3: REWARDS SYSTEM
+# ==========================================
+# Syntax for keys:
+# - 'X'              : Exact wave number (e.g., '10')
+# - 'every X normal' : Recurring reward during normal waves (e.g., 'every 5 normal')
+# - 'every X endless': Recurring reward during endless mode
+#
+# Supported reward types:
+# - vault:<amount>   : Gives money (Requires Vault)
+# - cmd(<command>)   : Executes a console command (%player% placeholder)
+rewards:
+  every 1 normal:
+  - vault:600000.0
+  every 5 normal:
+  - vault:2000000.0
+  every 10 normal:
+  - vault:3000000.0
+  '85':
+  - vault:8000000.0
+  every 3 endless:
+  - 'after-game: true'
+  - vault:2000000.0
+# ==========================================
+# AREA 4: SMART WAVES CONFIGURATION
+# ==========================================
+# -- WAVES SYNTAX GUIDE --
+# 'wave_name': (Must be a unique name, cannot be duplicated)
+#   waves: The condition to spawn this wave.
+#      - Range     : '1-5' (Spawns from wave 1 to 5)
+#      - List      : '3, 7' (Spawns on wave 3 and 7)
+#      - Endless   : '21+' (Spawns from wave 21 until infinity)
+#
+#   priority: Resolves conflicts when multiple waves match.
+#      - Priority 1: Highest (Always overrides others. Use for Bosses/Supplies).
+#      - Priority 5: Lowest (Default).
+#      - If priorities are equal, the system selects one randomly.
+#
+#   wave_types:
+#      - mob    : Standard mob spawning.
+#      - swarm  : Applies 'mob-multiplier' to spawn massive hordes.
+#      - boss   : Summons Custom Bosses from bosses.yml.
+#      - supply : Spawns a Supply Chest (Uses 'supply-id' and 'duration').
+#
+#   Modifiers (Optional):
+#      - maxhp-bonus    : '+10' (Adds 10 HP) or 'x2.0' (Doubles base HP).
+#      - damage-bonus   : '+2' or 'x1.5'.
+#      - general-effect : 'speed:1, resistance:2' (Applies potion effects).
+# ==========================================
+
+waves:
+  supply_drop_15:
+    waves: 10
+    priority: 1
+    wave_types: supply
+    supply-id: supply15
+    duration: 30.0
+  supply_drop_16:
+    waves: 20
+    priority: 1
+    wave_types: supply
+    supply-id: supply16
+    duration: 30.0
+  supply_drop_17:
+    waves: 30
+    priority: 1
+    wave_types: supply
+    supply-id: supply17
+    duration: 30.0
+  supply_drop_18:
+    waves: 40
+    priority: 1
+    wave_types: supply
+    supply-id: supply18
+    duration: 30.0
+  supply_drop_19:
+    waves: 50
+    priority: 1
+    wave_types: supply
+    supply-id: supply19
+    duration: 30.0
+  supply_drop_20:
+    waves: 60
+    priority: 1
+    wave_types: supply
+    supply-id: supply20
+    duration: 30.0
+  supply_drop_21:
+    waves: 70
+    priority: 1
+    wave_types: supply
+    supply-id: supply21
+    duration: 30.0
+  supply_drop_22:
+    waves: 80
+    priority: 1
+    wave_types: supply
+    supply-id: supply22
+    duration: 30.0
+  supply_drop_23:
+    waves: 90
+    priority: 1
+    wave_types: supply
+    supply-id: supply23
+    duration: 30.0
+  supply_drop_24:
+    waves: 99
+    priority: 1
+    wave_types: supply
+    supply-id: supply24
+    duration: 40.0
+  
+  # ----------------------------------------
+  # BOSS RUSH (Priority 1) - 10 Waves
+  # ----------------------------------------
+  boss_stage3_1:
+    waves: 15
+    priority: 1
+    wave_types: boss
+    mobs:
+      titan_of_the_depths: 1
+  boss_stage3_2:
+    waves: 25
+    priority: 1
+    wave_types: boss
+    mobs:
+      stormpiercer: 1
+  boss_stage3_3:
+    waves: 35
+    priority: 1
+    wave_types: boss
+    mobs:
+      void_weaver: 1
+  boss_stage3_4:
+    waves: 45
+    priority: 1
+    wave_types: boss
+    mobs:
+      infernal_warlord: 1
+  boss_stage3_5:
+    waves: 55
+    priority: 1
+    wave_types: boss
+    mobs:
+      harbinger_of_doom: 1
+  boss_stage3_6:
+    waves: 65
+    priority: 1
+    wave_types: boss
+    mobs:
+      titan_of_the_depths: 1
+      stormpiercer: 1
+  boss_stage3_7:
+    waves: 75
+    priority: 1
+    wave_types: boss
+    mobs:
+      infernal_warlord: 1
+      void_weaver: 1
+  boss_stage3_8:
+    waves: 85
+    priority: 1
+    wave_types: boss
+    mobs:
+      harbinger_of_doom: 1
+      titan_of_the_depths: 1
+  boss_stage3_9:
+    waves: 95
+    priority: 1
+    wave_types: boss
+    mobs:
+      harbinger_of_doom: 1
+      infernal_warlord: 1
+      void_weaver: 1
+  boss_stage3_final:
+    waves: 100
+    priority: 1
+    wave_types: boss
+    mobs:
+      the_fallen_king: 1
+  
+  # ----------------------------------------
+  # SWARM EVENTS (Priority 2) - 5 Waves
+  # ----------------------------------------
+  swarm_stage3_1:
+    waves: 12
+    priority: 2
+    wave_types: swarm
+    mob-multiplier: 2.5
+    maxhp-bonus: x1.5
+    general-effect: speed:2
+    mobs:
+      cave_spider: 15
+      silverfish: 15
+      slime: 10
+  
+  swarm_stage3_2:
+    waves: 32
+    priority: 2
+    wave_types: swarm
+    mob-multiplier: 2.5
+    maxhp-bonus: x2.0
+    general-effect: speed:2, jump_boost:2
+    mobs:
+      breeze: 8
+      stray: 15
+      bogged: 10
+  
+  swarm_stage3_3:
+    waves: 52
+    priority: 2
+    wave_types: swarm
+    mob-multiplier: 2.5
+    maxhp-bonus: x2.5
+    general-effect: speed:3, resistance:1
+    mobs:
+      zoglin: 12
+      vindicator: 12
+      magma_cube: 15
+  
+  swarm_stage3_4:
+    waves: 72
+    priority: 2
+    wave_types: swarm
+    mob-multiplier: 2.5
+    maxhp-bonus: x3.0
+    general-effect: speed:3, invisibility:1
+    mobs:
+      endermite: 20
+      phantom: 15
+      witch: 8
+  
+  swarm_stage3_5:
+    waves: 92
+    priority: 2
+    wave_types: swarm
+    mob-multiplier: 3.0
+    maxhp-bonus: x4.0
+    general-effect: speed:3, resistance:2
+    mobs:
+      creeper: 15
+      wither_skeleton: 15
+      piglin_brute: 15
+  
+  stage3_phase1:
+    waves: 1-4
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x2.5
+    damage-bonus: x2.5
+    general-effect: speed:2
+    mobs:
+      zombie:
+        amount: 3
+        equip:
+        - diamond_sword:1 sharpness:5 knockback:1 %100
+        - diamond_chestplate:1 protection:4 thorns:2 %100
+      skeleton:
+        amount: 3
+        equip:
+        - bow:1 power:6 punch:2 flame:1 %100
+        - diamond_helmet:1 protection:4 %100
+      spider: 2
+      silverfish: 2
+  
+  # --- Phase 2 (5-9): Vindicator Blitz ---
+  stage3_phase2:
+    waves: 5-9
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x2.8
+    damage-bonus: x1.8
+    general-effect: speed:2
+    mobs:
+      vindicator:
+        amount: 3
+        equip:
+        - iron_axe:1 sharpness:6 knockback:2 %100
+        - diamond_leggings:1 protection:4 thorns:3 %100
+      pillager: 3
+      ravager: 1
+      evoker: 1
+  
+  # --- Phase 3 (11-14): Fire Walkers ---
+  stage3_phase3:
+    waves: 11-14
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x3.0
+    damage-bonus: x2.0
+    general-effect: speed:2, fire_resistance:1
+    mobs:
+      piglin_brute:
+        amount: 3
+        equip:
+        - golden_axe:1 sharpness:7 fire_aspect:2 %100
+        - golden_chestplate:1 protection:5 thorns:3 %100
+      blaze: 2
+      magma_cube: 2
+      wither_skeleton: 1
+  
+  # --- Phase 4 (16-19): The Deep Dark ---
+  stage3_phase4:
+    waves: 16-19
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x3.2
+    damage-bonus: x2.0
+    general-effect: speed:2, resistance:1
+    mobs:
+      warden: 1
+      cave_spider: 3
+      silverfish: 3
+      enderman: 2
+  
+  # --- Phase 5 (21-24): Heavy Artillery (Cơn mưa tên lửa) ---
+  stage3_phase5:
+    waves: 21-24
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x3.5
+    damage-bonus: x2.2
+    general-effect: speed:2
+    mobs:
+      stray:
+        amount: 3
+        equip:
+        - bow:1 power:6 punch:3 flame:1 %100
+        - diamond_helmet:1 projectile_protection:5 %100
+        - diamond_chestplate:1 thorns:2 %100
+      wither_skeleton: 2
+      breeze: 2
+      skeleton: 2
+  
+  # --- Phase 6 (26-29): Kamikaze Phantoms ---
+  stage3_phase6:
+    waves: 26-29
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x3.8
+    damage-bonus: x2.5
+    general-effect: speed:2
+    mobs:
+      creeper:
+        amount: 3
+        explosion-damage: x3.0
+        effect: glowing:1, speed:3
+      phantom: 3
+      witch: 2
+      bogged: 2
+  
+  # --- Phase 7 (31-34): Magic & Madness ---
+  stage3_phase7:
+    waves: 31-34
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x4.0
+    damage-bonus: x2.5
+    general-effect: speed:2, regeneration:1
+    mobs:
+      evoker: 2
+      witch: 2
+      vindicator:
+        amount: 3
+        equip:
+        - iron_axe:1 sharpness:7 knockback:2 %100
+      zoglin: 2
+  
+  # --- Phase 8 (36-39): Unstoppable Tanks ---
+  stage3_phase8:
+    waves: 36-39
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x4.2
+    damage-bonus: x2.8
+    general-effect: resistance:2
+    mobs:
+      ravager: 2
+      zoglin: 3
+      piglin_brute:
+        amount: 2
+        equip:
+        - iron_chestplate:1 protection:6 thorns:4 %100
+      iron_golem: 1
+  
+  # --- Phase 9 (41-44): Agile Assassins ---
+  stage3_phase9:
+    waves: 41-44
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x4.5
+    damage-bonus: x3.0
+    general-effect: speed:3, jump_boost:2
+    mobs:
+      bogged:
+        amount: 4
+        equip:
+        - bow:1 power:6 punch:3 %100
+      cave_spider: 2
+      silverfish: 2
+      breeze: 1
+  
+  # --- Phase 10 (46-49): Brute Force (Bắt đầu trang bị Netherite) ---
+  stage3_phase10:
+    waves: 46-49
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x4.8
+    damage-bonus: x3.2
+    general-effect: speed:2, strength:1
+    mobs:
+      piglin_brute:
+        amount: 3
+        equip:
+        - netherite_axe:1 sharpness:6 knockback:2 fire_aspect:1 %100
+        - netherite_boots:1 protection:5 thorns:3 %100
+        - netherite_chestplate:1 protection:5 %100
+      vindicator: 3
+      ravager: 1
+      wither_skeleton: 2
+  
+  # --- Phase 11 (51-54): The Swarmers ---
+  stage3_phase11:
+    waves: 51-54
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x5.0
+    damage-bonus: x3.5
+    general-effect: speed:3
+    mobs:
+      slime: 4
+      magma_cube: 4
+      endermite: 2
+  
+  # --- Phase 12 (56-59): Void Walkers ---
+  stage3_phase12:
+    waves: 56-59
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x5.2
+    damage-bonus: x3.8
+    general-effect: speed:2, invisibility:1
+    mobs:
+      enderman: 4
+      phantom: 3
+      warden: 1
+  
+  # --- Phase 13 (61-64): Explosive Hell ---
+  stage3_phase13:
+    waves: 61-64
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x5.5
+    damage-bonus: x4.0
+    general-effect: speed:2, fire_resistance:1
+    mobs:
+      creeper:
+        amount: 3
+        explosion-damage: x3.5
+        effect: glowing:1
+      ghast: 1
+      blaze: 4
+      magma_cube: 2
+  
+  # --- Phase 14 (66-69): Netherite Legion ---
+  stage3_phase14:
+    waves: 66-69
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x5.8
+    damage-bonus: x4.2
+    general-effect: speed:2, resistance:2
+    mobs:
+      zombie:
+        amount: 4
+        equip:
+        - netherite_sword:1 sharpness:7 fire_aspect:2 knockback:2 %100
+        - netherite_chestplate:1 protection:6 thorns:4 %100
+      skeleton:
+        amount: 4
+        equip:
+        - bow:1 power:7 punch:4 flame:2 %100
+        - netherite_helmet:1 projectile_protection:6 thorns:3 %100
+      husk: 1
+      stray: 1
+  
+  # --- Phase 15 (71-74): Illager Elite ---
+  stage3_phase15:
+    waves: 71-74
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x6.2
+    damage-bonus: x4.5
+    general-effect: speed:3
+    mobs:
+      evoker: 2
+      vindicator:
+        amount: 4
+        equip:
+        - netherite_axe:1 sharpness:8 knockback:3 %100
+        - netherite_leggings:1 protection:6 thorns:4 %100
+      ravager: 2
+      pillager: 3
+  
+  # --- Phase 16 (76-79): Nether Elite ---
+  stage3_phase16:
+    waves: 76-79
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x6.5
+    damage-bonus: x4.8
+    general-effect: speed:2, strength:1
+    mobs:
+      piglin_brute:
+        amount: 4
+        equip:
+        - netherite_axe:1 sharpness:9 fire_aspect:3 knockback:3 %100
+        - netherite_chestplate:1 protection:7 thorns:5 %100
+      wither_skeleton:
+        amount: 4
+        equip:
+        - netherite_sword:1 sharpness:8 knockback:2 %100
+        - netherite_helmet:1 protection:7 thorns:4 %100
+      blaze: 3
+  
+  # --- Phase 17 (81-84): Wind & Poison ---
+  stage3_phase17:
+    waves: 81-84
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x7.0
+    damage-bonus: x5.0
+    general-effect: speed:3, regeneration:1
+    mobs:
+      breeze: 3
+      bogged:
+        amount: 4
+        equip:
+        - bow:1 power:8 punch:4 flame:2 %100
+      cave_spider: 3
+  
+  # --- Phase 18 (86-89): Warden's Wrath ---
+  stage3_phase18:
+    waves: 86-89
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x7.5
+    damage-bonus: x5.5
+    general-effect: resistance:3, speed:2
+    mobs:
+      warden: 1
+      stray: 4
+      witch: 2
+      phantom: 3
+  
+  # --- Phase 19 (91-94): The Royal Guard ---
+  stage3_phase19:
+    waves: 91-94
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x8.5
+    damage-bonus: x6.0
+    general-effect: speed:3, strength:2
+    mobs:
+      piglin_brute:
+        amount: 4
+        equip:
+        - netherite_axe:1 sharpness:10 fire_aspect:4 knockback:3 %100
+        - netherite_chestplate:1 protection:8 thorns:6 %100
+      wither_skeleton:
+        amount: 4
+        equip:
+        - netherite_sword:1 sharpness:10 knockback:4 %100
+        - netherite_helmet:1 protection:8 thorns:5 %100
+      evoker: 2
+      ravager: 1
+  
+  # --- Phase 20 (96-98): The Final Gate ---
+  stage3_phase20:
+    waves: 96-98
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x10.0
+    damage-bonus: x7.0
+    general-effect: speed:3, resistance:3, regeneration:2
+    mobs:
+      warden: 1
+      creeper:
+        amount: 3
+        explosion-damage: x4.0
+        effect: glowing:1, speed:3
+      ravager: 2
+      breeze: 3
+  
+  endless_stage3_chaos:
+    waves: 101+
+    priority: 4
+    after-game: true
+    wave_types: mob
+    maxhp-bonus: x15.0
+    damage-bonus: x10.0
+    movement-speed: x2.0
+    general-effect: speed:3, strength:4, resistance:4, regeneration:3
+    mobs:
+      warden: 5
+      wither_skeleton:
+        amount: 25
+        equip:
+        - netherite_sword:1 sharpness:7 fire_aspect:3 %100
+        - netherite_chestplate:1 protection:6 %100
+      piglin_brute:
+        amount: 20
+        equip:
+        - netherite_axe:1 sharpness:7 %100
+      evoker: 10
+      creeper:
+        amount: 15
+        explosion-damage: x5.0
+        effect: glowing:1, speed:4
+      bogged:
+        amount: 20
+        equip:
+        - bow:1 power:7 punch:3 %100
+  
+  endless_stage3_supply_loop:
+    waves: 105, 115, 125, 135, 145, 155, 165
+    priority: 2
+    after-game: true
+    wave_types: supply
+    supply-id: supply24
+    duration: 20.0
+  
+  endless_stage3_swarm_loop:
+    waves: 108, 118, 128, 138, 148, 158
+    priority: 3
+    after-game: true
+    wave_types: swarm
+    mob-multiplier: 4.0
+    maxhp-bonus: x10.0
+    damage-bonus: x8.0
+    general-effect: speed:3, jump_boost:2
+    mobs:
+      wither_skeleton: 10
+      piglin_brute: 10
+      creeper: 10
+      breeze: 10
+last-match:
+  wave: 101
+  is-endless: true
+  players:
+    7c48c592-f7c3-3112-b564-f1cbf5261ca3:
+      name: JJFloof
+      class: finallaw
+      kills: 240
+    4f03bcff-767d-30ec-9a5f-6366f6fa88ae:
+      name: XelvoMC
+      class: finallaw
+      kills: 115

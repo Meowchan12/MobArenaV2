@@ -169,7 +169,8 @@ public class ArenaScoreboard {
         ConfigurationSection wavesSec = config.getConfigurationSection("waves");
         if (wavesSec == null) return "None";
 
-        for (int w = currentWave + 1; w <= currentWave + 100; w++) {
+        int maxSearch = currentWave + 25;
+        for (int w = currentWave + 1; w <= maxSearch; w++) {
             for (String key : wavesSec.getKeys(false)) {
                 ConfigurationSection sec = wavesSec.getConfigurationSection(key);
                 if (sec != null && isBossSection(sec)) {
@@ -194,7 +195,8 @@ public class ArenaScoreboard {
         if (config != null && config.contains("waves")) {
             ConfigurationSection wavesSec = config.getConfigurationSection("waves");
             if (wavesSec != null) {
-                for (int w = currentWave + 1; w <= currentWave + 100; w++) {
+                int maxSearch = currentWave + 25;
+                for (int w = currentWave + 1; w <= maxSearch; w++) {
                     for (String key : wavesSec.getKeys(false)) {
                         ConfigurationSection sec = wavesSec.getConfigurationSection(key);
                         if (sec != null && "supply".equalsIgnoreCase(sec.getString("wave_types"))) {
@@ -208,7 +210,8 @@ public class ArenaScoreboard {
         if (config != null && config.contains("supplies")) {
             ConfigurationSection sec = config.getConfigurationSection("supplies");
             if (sec != null) {
-                for (int w = currentWave + 1; w <= currentWave + 100; w++) {
+                int maxSearch = currentWave + 25;
+                for (int w = currentWave + 1; w <= maxSearch; w++) {
                     if (sec.contains(String.valueOf(w))) return String.valueOf(w);
                 }
             }

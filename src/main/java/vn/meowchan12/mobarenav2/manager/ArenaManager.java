@@ -17,6 +17,7 @@ import vn.meowchan12.mobarenav2.MobArenav2;
 import vn.meowchan12.mobarenav2.arena.Arena;
 import vn.meowchan12.mobarenav2.arena.ArenaPlayerProfile;
 import vn.meowchan12.mobarenav2.arena.ArenaScoreboard;
+import vn.meowchan12.mobarenav2.exceptions.InvalidConfigurationException;
 
 import java.io.File;
 import java.util.Collection;
@@ -55,7 +56,7 @@ public class ArenaManager {
         return false;
     }
 
-    // --- SAFE LOAD ALGORITHM ---
+    // --- ENHANCED SAFE LOAD ALGORITHM ---
     public void loadArenas() {
         File folder = plugin.getConfigManager().getArenasFolder();
         File[] files = folder.listFiles((dir, name) -> name.endsWith(".yml"));
@@ -67,9 +68,13 @@ public class ArenaManager {
 
             try {
                 config.load(file);
+                validateArenaConfig(config, file.getName());
+            } catch (InvalidConfigurationException e) {
+                printConfigError(e, "Skipping arena '" + name + "' to protect the server instance.");
+                continue;
             } catch (Exception e) {
-                plugin.getLogger().severe("[MobArenav2] ❌ YAML SYNTAX ERROR IN FILE: " + file.getName());
-                plugin.getLogger().severe("[MobArenav2] Details: " + e.getMessage());
+                plugin.getLogger().severe("[MobArenav2] ❌ CRITICAL YAML SYNTAX ERROR IN FILE: " + file.getName());
+                plugin.getLogger().severe("[MobArenav2] Details: The file is structurally broken. Please check for missing quotes or bad indentation.");
                 continue;
             }
 
@@ -88,12 +93,19 @@ public class ArenaManager {
                     if (sp != null) arena.getSpawnpoints().add(sp);
                 }
             }
+
+            if (config.contains("coords.supplypoints")) {
+                for (String key : config.getConfigurationSection("coords.supplypoints").getKeys(false)) {
+                    Location sp = parseLocation(config.getString("coords.supplypoints." + key));
+                    if (sp != null) arena.getSupplypoints().add(sp);
+                }
+            }
+
             addArena(arena);
-            plugin.getLogger().info("Loaded arena: " + name);
+            plugin.getLogger().info("[MobArenav2] Loaded arena blueprint: " + name);
         }
     }
 
-    // --- HOT-RELOAD (SAFE MODE) ---
     public void reloadArenas() {
         File folder = plugin.getConfigManager().getArenasFolder();
         File[] files = folder.listFiles((dir, name) -> name.endsWith(".yml"));
@@ -105,9 +117,13 @@ public class ArenaManager {
 
             try {
                 config.load(file);
+                validateArenaConfig(config, file.getName());
+            } catch (InvalidConfigurationException e) {
+                printConfigError(e, "Reload operation ABORTED for this file to protect active data!");
+                continue;
             } catch (Exception e) {
-                plugin.getLogger().severe("[MobArenav2] ❌ YAML SYNTAX ERROR IN FILE: " + file.getName());
-                plugin.getLogger().severe("[MobArenav2] Reload operation ABORTED for this file to protect data!");
+                plugin.getLogger().severe("[MobArenav2] ❌ CRITICAL YAML SYNTAX ERROR IN FILE: " + file.getName());
+                plugin.getLogger().severe("[MobArenav2] Reload operation ABORTED for this file to protect active data!");
                 continue;
             }
 
@@ -132,11 +148,50 @@ public class ArenaManager {
                     if (sp != null) arena.getSpawnpoints().add(sp);
                 }
             }
+
+            if (config.contains("coords.supplypoints")) {
+                arena.getSupplypoints().clear();
+                for (String key : config.getConfigurationSection("coords.supplypoints").getKeys(false)) {
+                    Location sp = parseLocation(config.getString("coords.supplypoints." + key));
+                    if (sp != null) arena.getSupplypoints().add(sp);
+                }
+            }
         }
         plugin.getLogger().info("[MobArenav2] Hot-reloaded all arena configurations safely.");
     }
 
-    // --- SAFE LOCATION PARSER ---
+    private void validateArenaConfig(YamlConfiguration config, String fileName) throws InvalidConfigurationException {
+        if (!config.contains("settings")) {
+            throw new InvalidConfigurationException("Missing the mandatory 'settings' section.", fileName, "ROOT");
+        }
+
+        if (!config.isInt("settings.max-waves")) {
+            throw new InvalidConfigurationException("The 'max-waves' value must be a valid integer.", fileName, "settings");
+        }
+
+        if (config.contains("waves")) {
+            for (String waveKey : config.getConfigurationSection("waves").getKeys(false)) {
+                String path = "waves." + waveKey;
+                if (!config.contains(path + ".waves")) {
+                    throw new InvalidConfigurationException("Missing the mandatory 'waves' condition (e.g., '1-5').", fileName, path);
+                }
+                if (!config.contains(path + ".wave_types")) {
+                    throw new InvalidConfigurationException("Missing the mandatory 'wave_types' identifier (e.g., 'mob', 'boss').", fileName, path);
+                }
+            }
+        }
+    }
+
+    private void printConfigError(InvalidConfigurationException e, String action) {
+        plugin.getLogger().severe("========================================");
+        plugin.getLogger().severe("[MobArenav2] ⛔ CONFIGURATION ERROR DETECTED ⛔");
+        plugin.getLogger().severe("[MobArenav2] File: " + e.getFileName());
+        plugin.getLogger().severe("[MobArenav2] Section: " + e.getSection());
+        plugin.getLogger().severe("[MobArenav2] Error: " + e.getMessage());
+        plugin.getLogger().severe("[MobArenav2] Action: " + action);
+        plugin.getLogger().severe("========================================");
+    }
+
     private Location parseLocation(String str) {
         if (str == null || str.isEmpty()) return null;
         try {
@@ -150,16 +205,26 @@ public class ArenaManager {
             World world = Bukkit.getWorld(parts[5]);
             return new Location(world, x, y, z, yaw, pitch);
         } catch (Exception e) {
-            plugin.getLogger().warning("[MobArenav2] ⚠ Invalid location format: " + str);
+            plugin.getLogger().warning("[MobArenav2] ⚠ Invalid location format detected and bypassed: " + str);
             return null;
         }
     }
 
+    // ==========================================
+    // VÁ LỖI THAM GIA TRẬN ĐẤU (BUG #3)
+    // ==========================================
     public boolean joinArena(Player player, String arenaName) {
         UUID uuid = player.getUniqueId();
 
+        // 1. Chặn join nếu đang chơi (Lobby)
         if (isPlaying(player)) {
             player.sendMessage("§c[MobArenav2] You are already in an arena!");
+            return false;
+        }
+
+        // 2. [MỚI] Chặn join nếu đang làm Spectator (Người chết)
+        if (isSpectating(player)) {
+            player.sendMessage("§c[MobArenav2] You are spectating! Use /ma leave first.");
             return false;
         }
 
@@ -180,6 +245,12 @@ public class ArenaManager {
             return false;
         }
 
+        // 3. [MỚI] Chặn join nếu trận đấu đang diễn ra
+        if (arena.isRunning()) {
+            player.sendMessage("§c[MobArenav2] The battle in this arena has already started!");
+            return false;
+        }
+
         FileConfiguration config = arena.getConfig();
         boolean isEnabled = config != null && config.getBoolean("settings.enabled", true);
         if (!isEnabled) {
@@ -187,13 +258,10 @@ public class ArenaManager {
             return false;
         }
 
-        // ==========================================
-        // [MỚI] ARENA LOCK SYSTEM (KIỂM TRA TIẾN ĐỘ)
-        // ==========================================
         if (config != null) {
             String requiredArena = config.getString("settings.required-arena", "");
             if (requiredArena != null && !requiredArena.isEmpty()) {
-                if (!player.hasPermission("mobarenav2.bypass.arenalock")) {
+                if (!player.isOp() && !player.hasPermission("mobarenav2.admin") && !player.hasPermission("mobarenav2.bypass.arenalock")) {
                     if (!plugin.getUserDataManager().hasUnlockedArena(uuid, requiredArena)) {
                         player.sendMessage("§c[MobArenav2] This arena is locked! You must clear §e" + requiredArena + " §cfirst to enter.");
                         return false;
@@ -261,11 +329,46 @@ public class ArenaManager {
                         }
 
                         resetPlayerState(player);
+
+                        // =====================================================================
+                        // [v5.2 FEATURE]: APPLY PERMANENT /MA SHOP BASE ATTRIBUTES
+                        // Applies permanent HP, Armor, Damage bonuses bought from /ma shop
+                        // =====================================================================
+                        if (plugin.getShopManager() != null) {
+                            plugin.getShopManager().applyPermanentAttributesToPlayer(player);
+                        }
+
+                        // =====================================================================
+                        // [v5.6 FEATURE]: PER-ARENA BASE HEALTH SYSTEM
+                        // Sets base max health for all players or per-class in this arena.
+                        // Survives Totem of Undying pops (attribute-based, not effect-based).
+                        // =====================================================================
+                        if (config != null) {
+                            double baseHealth = config.getDouble("settings.base-health", 0.0);
+                            if (baseHealth > 0) {
+                                AttributeInstance hpAttr = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                                if (hpAttr != null) {
+                                    // Stack with shop bonuses: shop sets base to 20+bonus, we set it to baseHealth+bonus
+                                    double shopBonus = hpAttr.getBaseValue() - 20.0; // Shop already added bonus on top of 20
+                                    hpAttr.setBaseValue(baseHealth + Math.max(0, shopBonus));
+                                    player.setHealth(hpAttr.getValue());
+                                }
+                            }
+                        }
+
                         player.setGameMode(GameMode.SURVIVAL);
                         player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
 
                         player.sendMessage("§a[MobArenav2] You have joined arena: §e" + arena.getName());
                         player.sendMessage("§b➡ Type §e/ma class §bto select your loadout.");
+
+                        // =====================================================================
+                        // [v5.2 FEATURE]: SERVER-WIDE JOIN ANNOUNCEMENT (ENGLISH)
+                        // Broadcasts a stylish message to all players to attract team members!
+                        // =====================================================================
+                        int currentCount = arena.getActivePlayers().size();
+                        int limitPlayers = (config != null) ? config.getInt("settings.player-limits.max-players", 99) : 99;
+                        Bukkit.broadcastMessage("§6§l[MobArenav2] §e" + player.getName() + " §7has joined arena §b" + arena.getName() + "§7! §8[§e" + currentCount + "§7/§e" + limitPlayers + "§8] §bType §e/ma join " + arena.getName() + " §bto fight together!");
                     });
                 }
             }
@@ -275,7 +378,7 @@ public class ArenaManager {
     }
 
     public boolean joinSpectator(Player player, String arenaName) {
-        if (isPlaying(player)) {
+        if (isPlaying(player) || isSpectating(player)) {
             player.sendMessage("§c[MobArenav2] You are already in an arena!");
             return false;
         }
@@ -305,10 +408,7 @@ public class ArenaManager {
             resetPlayerState(player);
 
             player.setGameMode(GameMode.ADVENTURE);
-            player.setAllowFlight(true);
-            player.setFlying(true);
             player.setInvulnerable(true);
-            player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0, false, false));
 
             player.sendMessage("§7[MobArenav2] You are now spectating §e" + arena.getName());
         });
@@ -317,22 +417,40 @@ public class ArenaManager {
     }
 
     public void handlePlayerDeath(Player player, Arena arena) {
+        if (player == null || !player.isOnline()) return;
+
         arena.getSpectators().add(player.getUniqueId());
 
-        Location specSpawn = arena.getSpectatorSpawn();
-        if (specSpawn != null && specSpawn.getWorld() != null) {
-            specSpawn.getWorld().getChunkAt(specSpawn).load(true);
-            player.teleport(specSpawn);
-        }
-
+        // 1. Reset health and player state FIRST to stop death animation / knockback / fire
         resetPlayerState(player);
         player.getInventory().clear();
-
         player.setGameMode(GameMode.ADVENTURE);
         player.setAllowFlight(true);
         player.setFlying(true);
         player.setInvulnerable(true);
         player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0, false, false));
+
+        // 2. Safe Spectator Location lookup (spectatorSpawn -> arenaSpawn -> lobby)
+        Location specSpawn = arena.getSpectatorSpawn();
+        if (specSpawn == null || specSpawn.getWorld() == null) {
+            specSpawn = arena.getArenaSpawn();
+        }
+        if (specSpawn == null || specSpawn.getWorld() == null) {
+            specSpawn = arena.getLobby();
+        }
+
+        final Location targetSpecLoc = specSpawn;
+
+        // 3. Teleport 1 tick later so Bukkit/Paper completes the event pipeline cleanly!
+        if (targetSpecLoc != null && targetSpecLoc.getWorld() != null) {
+            targetSpecLoc.getWorld().getChunkAt(targetSpecLoc).addPluginChunkTicket(plugin);
+            targetSpecLoc.getWorld().getChunkAt(targetSpecLoc).load(true);
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (player.isOnline() && arena.getSpectators().contains(player.getUniqueId())) {
+                    player.teleport(targetSpecLoc);
+                }
+            }, 1L);
+        }
 
         arena.broadcastMessage("§c[MobArenav2] §e" + player.getName() + " §chas fallen and is now spectating!");
 

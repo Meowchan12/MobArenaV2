@@ -35,6 +35,7 @@ public final class MobArenav2 extends JavaPlugin {
     private SupplyManager supplyManager;
     private WaveManager waveManager;
     private BossManager bossManager;
+    private vn.meowchan12.mobarenav2.shop.manager.ShopManager shopManager;
 
     @Override
     public void onEnable() {
@@ -59,6 +60,7 @@ public final class MobArenav2 extends JavaPlugin {
         this.supplyManager = new SupplyManager(this);
         this.bossManager = new BossManager(this);
         this.waveManager = new WaveManager(this);
+        this.shopManager = new vn.meowchan12.mobarenav2.shop.manager.ShopManager(this);
         this.arenaManager = new ArenaManager(this);
         this.setupManager = new SetupManager();
 
@@ -75,6 +77,7 @@ public final class MobArenav2 extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new MobAIListener(this, this.arenaManager), this);
         getServer().getPluginManager().registerEvents(new ArenaMobCombatListener(this), this);
         getServer().getPluginManager().registerEvents(new UpgradeGUI(this), this);
+        getServer().getPluginManager().registerEvents(new vn.meowchan12.mobarenav2.shop.gui.ShopGUI(this, this.shopManager), this);
 
         // 5. Đăng ký Command chính
         if (getCommand("ma") != null) {
@@ -129,4 +132,5 @@ public final class MobArenav2 extends JavaPlugin {
     public SupplyManager getSupplyManager() { return supplyManager; }
     public WaveManager getWaveManager() { return waveManager; }
     public BossManager getBossManager() { return bossManager; }
+    public vn.meowchan12.mobarenav2.shop.manager.ShopManager getShopManager() { return shopManager; }
 }

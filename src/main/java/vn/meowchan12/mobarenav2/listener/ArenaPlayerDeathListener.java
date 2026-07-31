@@ -42,7 +42,6 @@ public class ArenaPlayerDeathListener implements Listener {
 
             if (player.getHealth() - event.getFinalDamage() <= 0) {
 
-                // --- TOTEM & DEATH MARK LOGIC ---
                 NamespacedKey dmKey = new NamespacedKey(plugin, "ma_death_mark");
                 boolean hasDeathMark = false;
 
@@ -70,15 +69,17 @@ public class ArenaPlayerDeathListener implements Listener {
                     player.getWorld().playSound(player.getLocation(), Sound.ENTITY_WITHER_BREAK_BLOCK, 1.0f, 0.5f);
                 }
 
-                // --- ARENA FAKE DEATH HANDLING ---
                 event.setCancelled(true);
                 player.getPersistentDataContainer().remove(dmKey);
 
-                // FIX: Hàm này đã bao gồm việc dịch chuyển vào Spectator Spawn rồi, không được gọi Teleport thêm lần nữa
                 plugin.getArenaManager().handlePlayerDeath(player, arena);
 
-                // FIX "Cascading Bug": CHỈ hiện bảng hỏi YES/NO nếu người chơi chết KHÔNG làm kết thúc Arena!
-                // Nếu đây là người cuối cùng chết, arena.isRunning() sẽ là false vì trận đấu vừa bị hủy bỏ.
+                // [ĐÃ SỬA] Bug #4: Tắt Fly Mode của Spectator để chống người chơi bay lượn trên không gian Arena
+                if (arena.getSpectators().contains(player.getUniqueId())) {
+                    player.setAllowFlight(false);
+                    player.setFlying(false);
+                }
+
                 if (arena.isRunning() && arena.getSpectators().contains(player.getUniqueId())) {
                     TextComponent question = new TextComponent("§eDo you want to leave the arena? ");
 

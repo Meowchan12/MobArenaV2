@@ -59,6 +59,56 @@ gui:
     title: "Choose Upgrade (Wave %wave%)"
 
 # ==========================================
+# ROGUELIKE UPGRADE SYSTEM CONFIGURATION
+# ==========================================
+# Controls mid-game buff choices that appear after wave clears.
+# Can be configured globally here, or overridden per-arena in arena ymls.
+# ==========================================
+upgrade-system:
+  enabled: true
+
+  # Trigger Mode Options:
+  #   "INTERVAL"       : Triggers every X waves (configured by trigger-every-waves).
+  #   "SPECIFIC_WAVES" : Triggers only on listed wave numbers (configured by specific-waves).
+  #   "STAGE_BASED"    : Triggers per wave range / stage intervals (configured by stage-triggers).
+  mode: "INTERVAL"
+
+  # [INTERVAL MODE] Trigger upgrade selection menu every X waves cleared
+  trigger-every-waves: 5
+
+  # [SPECIFIC_WAVES MODE] List of wave numbers that offer upgrades
+  specific-waves:
+    - 5
+    - 10
+    - 15
+    - 20
+    - 25
+    - 30
+
+  # [STAGE_BASED MODE] Configure different upgrade frequencies per stage / wave range
+  stage-triggers:
+    stage_1:
+      min-wave: 1
+      max-wave: 10
+      interval: 5
+    stage_2:
+      min-wave: 11
+      max-wave: 30
+      interval: 3
+
+  # Default maximum upgrade slots per player (limits active different upgrade types)
+  default-max-slots: 3
+
+  # Class-specific upgrade slot limits (overrides default-max-slots per class)
+  class-slots:
+    Tank: 4
+    Warrior: 3
+    Archer: 3
+    Mage: 2
+    Alchemist: 4
+    Juggernaut: 2
+
+# ==========================================
 # SYSTEM MESSAGES
 # ==========================================
 messages:

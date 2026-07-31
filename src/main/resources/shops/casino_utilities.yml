@@ -1,0 +1,65 @@
+# ==========================================================
+# MOBARENA SHOP - CASINO & DRAFT UTILITIES
+# ----------------------------------------------------------
+# Consumables and Draft utilities purchased with Casino Chips
+# ==========================================================
+
+category:
+  id: "casino_utilities"
+  display-name: "&#FFAA00&lCASINO & DRAFT UTILITIES"
+  material: KELP
+  slot: 24
+  lore:
+    - "&7&m---------------------"
+    - "&fBuy utility passes and reroll tickets."
+    - "&e&l✦ Uses Casino Chips (Earned via Gameplay)!"
+    - "&7&m---------------------"
+
+items:
+  reroll_ticket:
+    category: "casino_utilities"
+    slot: 20
+    display-name: "&#FFAA00&lUpgrade Reroll Ticket"
+    material: PAPER
+    lore:
+      - "&7&m---------------------"
+      - "&fAllows you to refresh upgrade draft options in battle."
+      - "&fPrice: &e%cost% Casino Chips"
+      - "&7&m---------------------"
+    price-type: CUSTOM_COMMAND
+    base-cost: 500.0
+    cost-multiplier: 1.0
+    max-level: 99
+    input-check:
+      placeholder: "%casino_chips_amount%"
+      required-value: 500.0
+      fail-message: "&c[Shop] You need at least 500 Casino Chips!"
+    input-take-command: "casino take %player% 500"
+    output-actions:
+      - "command: ma giveitem %player% reroll_ticket 1"
+      - "sound: ITEM_BOOK_PAGE_TURN 1.0 1.0"
+      - "message: &e[MobArena Shop] Purchased 1x Upgrade Reroll Ticket!"
+
+  insurance_pass:
+    category: "casino_utilities"
+    slot: 24
+    display-name: "&#FF55FF&lArena Insurance Pass"
+    material: GOLD_NUGGET
+    lore:
+      - "&7&m---------------------"
+      - "&fProtects 70% of your Vault rewards if team loses!"
+      - "&fPrice: &d%cost% Casino Chips"
+      - "&7&m---------------------"
+    price-type: CUSTOM_COMMAND
+    base-cost: 1200.0
+    cost-multiplier: 1.0
+    max-level: 99
+    input-check:
+      placeholder: "%casino_chips_amount%"
+      required-value: 1200.0
+      fail-message: "&c[Shop] You need at least 1200 Casino Chips!"
+    input-take-command: "casino take %player% 1200"
+    output-actions:
+      - "command: ma giveitem %player% insurance_pass 1"
+      - "sound: ENTITY_EXPERIENCE_ORB_PICKUP 1.0 1.5"
+      - "message: &d[MobArena Shop] Purchased 1x Arena Insurance Pass!"

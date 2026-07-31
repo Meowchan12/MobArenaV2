@@ -9,9 +9,45 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.util.io.BukkitObjectInputStream;
+import org.bukkit.util.io.BukkitObjectOutputStream;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.util.Base64;
 
 public class ItemParser {
 
+    // ==========================================
+    // [FIX BUG #6] HỆ THỐNG MÃ HÓA BASE64 ĐỂ LƯU NBT (SHULKER, BUNDLE)
+    // ==========================================
+    public static String itemToBase64(ItemStack item) {
+        try {
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream);
+            dataOutput.writeObject(item);
+            dataOutput.close();
+            return Base64.getEncoder().encodeToString(outputStream.toByteArray());
+        } catch (Exception e) {
+            throw new IllegalStateException("Unable to save item stack.", e);
+        }
+    }
+
+    public static ItemStack itemFromBase64(String data) {
+        try {
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64.getDecoder().decode(data));
+            BukkitObjectInputStream dataInput = new BukkitObjectInputStream(inputStream);
+            ItemStack item = (ItemStack) dataInput.readObject();
+            dataInput.close();
+            return item;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // ==========================================
+    // TRÌNH PHÂN TÍCH TEXT CŨ (GIỮ LẠI ĐỂ TƯƠNG THÍCH NGƯỢC)
+    // ==========================================
     public static ItemStack parseItem(String itemString) {
         if (itemString == null || itemString.isEmpty()) return null;
 
@@ -63,7 +99,6 @@ public class ItemParser {
                 break;
             }
 
-            // [FIX LỖI TẠI ĐÂY] Tách chuỗi bằng dấu ";" trước để lấy danh sách nhiều enchant
             String[] enchantsList = part.split(";");
             for (String enchString : enchantsList) {
                 String[] enchData = enchString.split(":");

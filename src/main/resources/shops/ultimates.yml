@@ -1,0 +1,75 @@
+# ==========================================================
+# MOBARENA SHOP - SPECIAL ULTIMATE ABILITIES
+# ----------------------------------------------------------
+# Active skills unlocked using PlayerPoints
+# ==========================================================
+
+category:
+  id: "ultimates"
+  display-name: "&#00FFFF&lSPECIAL ULTIMATE ABILITIES"
+  material: BEACON
+  slot: 22
+  lore:
+    - "&7&m---------------------"
+    - "&fUnlock active ultimate abilities."
+    - "&b&l✦ Trigger powerful spells in battle!"
+    - "&7&m---------------------"
+
+items:
+  shadow_dash_ultimate:
+    category: "ultimates"
+    slot: 20
+    display-name: "&#00FFFF&lShadow Dash Ultimate"
+    material: FEATHER
+    lore:
+      - "&7&m---------------------"
+      - "&fDash forward 8 blocks and stun mobs in your trajectory."
+      - "&fCooldown: &e25 Seconds"
+      - "&7&m---------------------"
+    price-type: PLAYERPOINTS
+    base-cost: 5000.0
+    cost-multiplier: 1.0
+    max-level: 1
+    output-actions:
+      - "permission: add mobarenav2.ultimate.shadowdash"
+      - "message: &b[MobArena Shop] Unlocked Shadow Dash Ultimate!"
+      - "sound: ENTITY_ENDERMAN_TELEPORT 1.0 2.0"
+
+  rallying_beacon_ultimate:
+    category: "ultimates"
+    slot: 22
+    display-name: "&#FFFF55&lRallying Beacon Ultimate"
+    material: GOLDEN_APPLE
+    lore:
+      - "&7&m---------------------"
+      - "&fPlant a Holy Banner restoring 30% Max HP to all teammates."
+      - "&fCooldown: &e45 Seconds"
+      - "&7&m---------------------"
+    price-type: PLAYERPOINTS
+    base-cost: 8000.0
+    cost-multiplier: 1.0
+    max-level: 1
+    output-actions:
+      - "permission: add mobarenav2.ultimate.rallyingbeacon"
+      - "message: &e[MobArena Shop] Unlocked Rallying Beacon Ultimate!"
+      - "sound: ENTITY_ZOMBIE_VILLAGER_CURE 1.0 1.2"
+
+  stasis_aegis_ultimate:
+    category: "ultimates"
+    slot: 24
+    display-name: "&#3399FF&lStasis Aegis Ultimate"
+    material: SHIELD
+    lore:
+      - "&7&m---------------------"
+      - "&fFreeze yourself in stasis for 3s (100% Invulnerable)."
+      - "&fBurst an icy shockwave when stasis ends."
+      - "&fCooldown: &e60 Seconds"
+      - "&7&m---------------------"
+    price-type: PLAYERPOINTS
+    base-cost: 10000.0
+    cost-multiplier: 1.0
+    max-level: 1
+    output-actions:
+      - "permission: add mobarenav2.ultimate.stasaegis"
+      - "message: &b[MobArena Shop] Unlocked Stasis Aegis Ultimate!"
+      - "sound: ITEM_SHIELD_BLOCK 1.0 0.8"

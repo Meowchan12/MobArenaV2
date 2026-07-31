@@ -1,9 +1,12 @@
 package vn.meowchan12.mobarenav2.listener;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
@@ -11,6 +14,7 @@ import org.bukkit.event.entity.EntityCombustByBlockEvent;
 import org.bukkit.event.entity.EntityCombustByEntityEvent;
 import org.bukkit.event.entity.EntityCombustEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
@@ -19,17 +23,25 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 import vn.meowchan12.mobarenav2.MobArenav2;
 import vn.meowchan12.mobarenav2.arena.Arena;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class ArenaProtectionListener implements Listener {
 
     private final MobArenav2 plugin;
 
+    private final List<Material> blockedUtilityBlocks = Arrays.asList(
+            Material.CRAFTING_TABLE, Material.FURNACE, Material.BLAST_FURNACE, Material.SMOKER,
+            Material.ANVIL, Material.CHIPPED_ANVIL, Material.DAMAGED_ANVIL,
+            Material.ENCHANTING_TABLE, Material.BREWING_STAND, Material.LOOM,
+            Material.CARTOGRAPHY_TABLE, Material.SMITHING_TABLE, Material.GRINDSTONE,
+            Material.STONECUTTER, Material.BARREL, Material.HOPPER, Material.DROPPER, Material.DISPENSER
+    );
+
     public ArenaProtectionListener(MobArenav2 plugin) {
         this.plugin = plugin;
     }
 
-    // --- ANTI-DUPE: LOCK INVENTORY DURING 3-SECOND COUNTDOWN ---
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (event.getWhoClicked() instanceof Player player) {
@@ -40,28 +52,41 @@ public class ArenaProtectionListener implements Listener {
         }
     }
 
-    // --- ANTI-DUPE: LOCK BLOCK INTERACTIONS (CHESTS/ENDER CHESTS) ---
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
+
         if (plugin.getInventoryBackupManager() != null && plugin.getInventoryBackupManager().isPendingJoin(player.getUniqueId())) {
             event.setCancelled(true);
+            return;
+        }
+
+        Arena arena = plugin.getArenaManager().getArenaByPlayer(player);
+        if (arena != null) {
+            if (arena.getSpectators().contains(player.getUniqueId())) {
+                event.setCancelled(true);
+                return;
+            }
+
+            if (arena.isRunning() && event.getAction() == Action.RIGHT_CLICK_BLOCK && event.getClickedBlock() != null) {
+                if (blockedUtilityBlocks.contains(event.getClickedBlock().getType())) {
+                    event.setCancelled(true);
+                    player.sendMessage("§c[MobArenav2] You cannot use utility blocks like Crafting Tables or Furnaces during combat!");
+                }
+            }
         }
     }
 
-    // --- ITEM DROP PREVENTION ---
     @EventHandler
     public void onItemDrop(PlayerDropItemEvent event) {
         Player player = event.getPlayer();
 
-        // 1. Block dropping items during the 3-second countdown
         if (plugin.getInventoryBackupManager() != null && plugin.getInventoryBackupManager().isPendingJoin(player.getUniqueId())) {
             event.setCancelled(true);
             player.sendMessage("§c[MobArenav2] You cannot drop items while preparing to join the arena!");
             return;
         }
 
-        // 2. Block dropping items inside the arena based on config
         Arena arena = plugin.getArenaManager().getArenaByPlayer(player);
         if (arena != null && arena.isRunning()) {
             boolean allowDrop = arena.getConfig().getBoolean("settings.rules.item-drop", false);
@@ -72,19 +97,33 @@ public class ArenaProtectionListener implements Listener {
         }
     }
 
-    // --- BLOCK BREAKING PREVENTION ---
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
-        if (plugin.getSetupManager().isInSetupMode(event.getPlayer())) return;
+        Player player = event.getPlayer();
+        if (plugin.getSetupManager().isInSetupMode(player)) return;
 
-        Arena arena = plugin.getArenaManager().getArenaByPlayer(event.getPlayer());
+        Arena arena = plugin.getArenaManager().getArenaByPlayer(player);
         if (arena != null && arena.isRunning()) {
+
+            // [FIX BUG #2]: Quét số nguyên và kiểm tra cả block trái + phải của Rương
+            if (event.getBlock().getType() == Material.CHEST) {
+                for (Location supplyLoc : arena.getActiveSupplies()) {
+                    if ((supplyLoc.getBlockX() == event.getBlock().getX() || supplyLoc.getBlockX() + 1 == event.getBlock().getX()) &&
+                            supplyLoc.getBlockY() == event.getBlock().getY() &&
+                            supplyLoc.getBlockZ() == event.getBlock().getZ()) {
+
+                        event.setCancelled(true);
+                        player.sendMessage("§c[MobArenav2] Supply chests are indestructible! Just open it!");
+                        return;
+                    }
+                }
+            }
+
             boolean allowBreak = arena.getConfig().getBoolean("settings.rules.block-break", false);
             if (!allowBreak) event.setCancelled(true);
         }
     }
 
-    // --- BLOCK PLACING PREVENTION ---
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
         if (plugin.getSetupManager().isInSetupMode(event.getPlayer())) return;
@@ -96,14 +135,12 @@ public class ArenaProtectionListener implements Listener {
         }
     }
 
-    // --- COMMAND WHITELIST (Applies to Lobby & Spectator) ---
     @EventHandler
     public void onCommandPreprocess(PlayerCommandPreprocessEvent event) {
         Player player = event.getPlayer();
         if (plugin.getSetupManager().isInSetupMode(player)) return;
 
         Arena arena = plugin.getArenaManager().getArenaByPlayer(player);
-
         if (arena != null) {
             boolean allowAllCmds = arena.getConfig().getBoolean("settings.rules.allow-commands", false);
             if (allowAllCmds) return;
@@ -130,7 +167,6 @@ public class ArenaProtectionListener implements Listener {
         }
     }
 
-    // --- ANTI-ESCAPE: TELEPORTATION BLOCKER ---
     @EventHandler
     public void onPlayerTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
@@ -141,25 +177,19 @@ public class ArenaProtectionListener implements Listener {
         if (to == null) return;
         PlayerTeleportEvent.TeleportCause cause = event.getCause();
 
-        // 1. Block teleportation by other plugins (e.g., /spawn, /home, /tp)
         if (cause == PlayerTeleportEvent.TeleportCause.COMMAND || cause == PlayerTeleportEvent.TeleportCause.PLUGIN) {
             boolean isValidDest = false;
-
-            // Differentiate internal MobArena teleports (Lobby, Spectator Spawn, Arena Spawn)
             if (isSameLocationSafe(to, arena.getLobby())) isValidDest = true;
             else if (isSameLocationSafe(to, arena.getSpectatorSpawn())) isValidDest = true;
             else if (isSameLocationSafe(to, arena.getArenaSpawn())) isValidDest = true;
             else if (arena.containsLocation(to)) isValidDest = true;
 
-            // If the destination is outside the arena boundaries => Cancel teleport
-            // Note: Valid /ma leave commands won't be trapped here as the player is removed from the arena map prior to teleportation.
             if (!isValidDest) {
                 event.setCancelled(true);
                 player.sendMessage("§c[MobArenav2] Teleportation has been blocked! You must type §e/ma leave §cto safely exit the arena.");
             }
         }
 
-        // 2. Block using Ender Pearls to escape combat boundaries
         if (cause == PlayerTeleportEvent.TeleportCause.ENDER_PEARL) {
             if (arena.isRunning() && !arena.containsLocation(to)) {
                 event.setCancelled(true);
@@ -168,13 +198,11 @@ public class ArenaProtectionListener implements Listener {
         }
     }
 
-    // Utility method to check safe coordinates (tolerance radius)
     private boolean isSameLocationSafe(Location loc1, Location loc2) {
         if (loc1 == null || loc2 == null || loc1.getWorld() != loc2.getWorld()) return false;
-        return loc1.distanceSquared(loc2) < 5.0; // Margin of error ~2 blocks
+        return loc1.distanceSquared(loc2) < 5.0;
     }
 
-    // --- PREVENT NATURAL MOB SPAWNING ---
     @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM ||
@@ -190,13 +218,11 @@ public class ArenaProtectionListener implements Listener {
         }
     }
 
-    // --- SUN IMMUNITY FOR ARENA MOBS ---
     @EventHandler
     public void onEntityCombust(EntityCombustEvent event) {
         if (event instanceof EntityCombustByEntityEvent || event instanceof EntityCombustByBlockEvent) {
             return;
         }
-
         for (Arena arena : plugin.getArenaManager().getAllArenas()) {
             if (arena.isRunning() && arena.getActiveMobs().contains(event.getEntity())) {
                 event.setCancelled(true);
@@ -205,8 +231,7 @@ public class ArenaProtectionListener implements Listener {
         }
     }
 
-    // --- PREVENT PLAYER PVP BASED ON CONFIG ---
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerPvP(EntityDamageByEntityEvent event) {
         if (!(event.getEntity() instanceof Player victim)) return;
 
@@ -216,9 +241,11 @@ public class ArenaProtectionListener implements Listener {
             attacker = p;
         } else if (event.getDamager() instanceof org.bukkit.entity.Projectile proj && proj.getShooter() instanceof Player p) {
             attacker = p;
+        } else if (event.getDamager() instanceof org.bukkit.entity.AreaEffectCloud cloud && cloud.getSource() instanceof Player p) {
+            attacker = p;
         }
 
-        if (attacker != null) {
+        if (attacker != null && !attacker.equals(victim)) {
             Arena arena = plugin.getArenaManager().getArenaByPlayer(victim);
             if (arena != null && plugin.getArenaManager().getArenaByPlayer(attacker) == arena) {
 
@@ -226,6 +253,20 @@ public class ArenaProtectionListener implements Listener {
                 if (!allowPvP) {
                     event.setCancelled(true);
                 }
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPlayerSplashPvP(PotionSplashEvent event) {
+        if (event.getEntity().getShooter() instanceof Player attacker) {
+            Arena arena = plugin.getArenaManager().getArenaByPlayer(attacker);
+            if (arena != null && !arena.getConfig().getBoolean("settings.rules.player-pvp", false)) {
+                event.getAffectedEntities().removeIf(entity ->
+                        entity instanceof Player &&
+                                !entity.equals(attacker) &&
+                                plugin.getArenaManager().getArenaByPlayer((Player) entity) == arena
+                );
             }
         }
     }

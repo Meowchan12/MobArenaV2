@@ -3,6 +3,8 @@ package vn.meowchan12.mobarenav2.manager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.Chest;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -39,7 +41,18 @@ public class WaveManager {
         arena.setVoting(false);
         arena.setEndlessMode(false);
         arena.getEndlessWaveQueue().clear();
-        arena.getActiveSupplies().clear();
+
+        if (!arena.getActiveSupplies().isEmpty()) {
+            for (Location oldLoc : arena.getActiveSupplies()) {
+                Block left = oldLoc.getBlock();
+                Block right = oldLoc.clone().add(1, 0, 0).getBlock();
+                if (left.getState() instanceof Chest c) c.getInventory().clear();
+                if (right.getState() instanceof Chest c) c.getInventory().clear();
+                left.setType(Material.AIR);
+                right.setType(Material.AIR);
+            }
+            arena.getActiveSupplies().clear();
+        }
 
         arena.broadcastMessage("§c§lThe arena has started! Prepare yourself!");
 
@@ -169,22 +182,28 @@ public class WaveManager {
                         if (waveActiveHalfSeconds >= currentSupplyDuration * 2) {
                             shouldAdvance = true;
 
-                            for (Location loc : arena.getActiveSupplies()) {
-                                if (loc.getBlock().getState() instanceof Chest chest) {
-                                    for (ItemStack item : chest.getInventory().getContents()) {
-                                        if (item != null && item.getType() != Material.AIR) {
-                                            loc.getWorld().dropItemNaturally(loc, item);
-                                        }
-                                    }
-                                    chest.getInventory().clear();
+                            if (!arena.getActiveSupplies().isEmpty()) {
+                                for (Location loc : arena.getActiveSupplies()) {
+                                    Block leftBlock = loc.getBlock();
+                                    Block rightBlock = loc.clone().add(1, 0, 0).getBlock();
+
+                                    if (leftBlock.getState() instanceof Chest chest) chest.getInventory().clear();
+                                    if (rightBlock.getState() instanceof Chest chest) chest.getInventory().clear();
+
+                                    leftBlock.setType(Material.AIR);
+                                    rightBlock.setType(Material.AIR);
                                 }
-                                loc.getBlock().setType(Material.AIR);
+                                arena.getActiveSupplies().clear();
+                                arena.broadcastMessage("§c[MobArenav2] The Supply Drop has vanished!");
                             }
-                            arena.getActiveSupplies().clear();
                         }
                     }
 
+                    // KHI WAVE KẾT THÚC VÀ CHUẨN BỊ CHUYỂN SANG WAVE MỚI
                     if (shouldAdvance) {
+                        // [TỐI ƯU HÓA TẠI ĐÂY] Quét và dọn dẹp mũi tên còn kẹt trên sân
+                        clearProjectiles(arena);
+
                         distributeWaveRewards(arena, arena.getCurrentWave());
                         for (Player p : arena.getPlayersAsObjects()) {
                             p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.2f);
@@ -200,8 +219,7 @@ public class WaveManager {
                         halfSecondTicks = 0;
                         nextWaveDelay = config.getDouble("settings.wave-conditions.next-wave", 6.0);
 
-                        int triggerEvery = plugin.getUpgradeManager().getTriggerEvery();
-                        if (triggerEvery > 0 && arena.getCurrentWave() % triggerEvery == 0 && !currentWaveType.equals("supply")) {
+                        if (plugin.getUpgradeManager().isUpgradeWave(arena, arena.getCurrentWave()) && !currentWaveType.equals("supply")) {
                             nextWaveDelay = 10.0;
                             arena.broadcastMessage("§b§l[UPGRADE] §aWave " + arena.getCurrentWave() + " cleared! Choose your mid-game buff!");
                             for (UUID uuid : arena.getActivePlayers()) {
@@ -235,20 +253,22 @@ public class WaveManager {
                                 for (Location loc : arena.getActiveSupplies()) {
                                     if (loc != null) {
                                         for (double y = 0.5; y <= 15.0; y += 1.0) {
-                                            loc.getWorld().spawnParticle(org.bukkit.Particle.END_ROD, loc.clone().add(0.5, y, 0.5), 2, 0.1, 0.1, 0.1, 0.01);
+                                            loc.getWorld().spawnParticle(org.bukkit.Particle.END_ROD, loc.clone().add(0.5, y, 0.5), 1, 0.1, 0.1, 0.1, 0.01);
+                                            loc.getWorld().spawnParticle(org.bukkit.Particle.END_ROD, loc.clone().add(1.5, y, 0.5), 1, 0.1, 0.1, 0.1, 0.01);
                                         }
 
                                         org.bukkit.Particle.DustOptions glowingBox = new org.bukkit.Particle.DustOptions(org.bukkit.Color.AQUA, 1.5F);
-                                        double[] edges = {0.0, 1.0};
-                                        for (double x : edges) {
-                                            for (double y : edges) {
-                                                for (double z : edges) {
+                                        double[] edgesX = {0.0, 2.0};
+                                        double[] edgesYZ = {0.0, 1.0};
+                                        for (double x : edgesX) {
+                                            for (double y : edgesYZ) {
+                                                for (double z : edgesYZ) {
                                                     loc.getWorld().spawnParticle(org.bukkit.Particle.DUST, loc.clone().add(x, y, z), 2, glowingBox);
                                                 }
                                             }
                                         }
 
-                                        loc.getWorld().spawnParticle(org.bukkit.Particle.FLAME, loc.clone().add(0.5, 0.5, 0.5), 5, 0.3, 0.3, 0.3, 0.05);
+                                        loc.getWorld().spawnParticle(org.bukkit.Particle.FLAME, loc.clone().add(1.0, 0.5, 0.5), 10, 0.5, 0.3, 0.3, 0.05);
                                     }
                                 }
                             } else {
@@ -261,6 +281,37 @@ public class WaveManager {
                 if (isWaiting) halfSecondTicks++;
             }
         }.runTaskTimer(plugin, 0L, 10L);
+    }
+
+    // ==========================================
+    // [TỐI ƯU HÓA] HÀM QUÉT VÀ DỌN SẠCH MŨI TÊN (CLEAR ARROWS)
+    // ==========================================
+    private void clearProjectiles(Arena arena) {
+        Location p1 = arena.getP1();
+        Location p2 = arena.getP2();
+        if (p1 == null || p2 == null || p1.getWorld() == null) return;
+
+        double minX = Math.min(p1.getX(), p2.getX());
+        double minY = Math.min(p1.getY(), p2.getY());
+        double minZ = Math.min(p1.getZ(), p2.getZ());
+        double maxX = Math.max(p1.getX(), p2.getX());
+        double maxY = Math.max(p1.getY(), p2.getY());
+        double maxZ = Math.max(p1.getZ(), p2.getZ());
+
+        for (org.bukkit.entity.Entity entity : p1.getWorld().getEntities()) {
+            if (entity instanceof org.bukkit.entity.Arrow ||
+                    entity instanceof org.bukkit.entity.SpectralArrow ||
+                    entity instanceof org.bukkit.entity.Trident) {
+
+                Location loc = entity.getLocation();
+                if (loc.getX() >= minX && loc.getX() <= maxX &&
+                        loc.getY() >= minY && loc.getY() <= maxY &&
+                        loc.getZ() >= minZ && loc.getZ() <= maxZ) {
+
+                    entity.remove();
+                }
+            }
+        }
     }
 
     private void triggerLightningStrike(Arena arena, ConfigurationSection lightningSec) {
@@ -408,6 +459,40 @@ public class WaveManager {
         }
     }
 
+    public void forceSkipWave(Arena arena, int targetWave) {
+        if (!arena.isRunning()) return;
+
+        for (org.bukkit.entity.LivingEntity mob : new ArrayList<>(arena.getActiveMobs())) {
+            if (mob != null && mob.isValid()) mob.remove();
+        }
+        arena.getActiveMobs().clear();
+
+        if (!arena.getActiveSupplies().isEmpty()) {
+            for (Location loc : arena.getActiveSupplies()) {
+                Block leftBlock = loc.getBlock();
+                Block rightBlock = loc.clone().add(1, 0, 0).getBlock();
+
+                if (leftBlock.getState() instanceof Chest chest) chest.getInventory().clear();
+                if (rightBlock.getState() instanceof Chest chest) chest.getInventory().clear();
+
+                leftBlock.setType(Material.AIR);
+                rightBlock.setType(Material.AIR);
+            }
+            arena.getActiveSupplies().clear();
+        }
+
+        // [TỐI ƯU HÓA TẠI ĐÂY] Quét và dọn sạch mũi tên ngay khi Admin ép Skip Wave
+        clearProjectiles(arena);
+
+        arena.setCurrentWave(targetWave);
+        arena.broadcastMessage("§c§l[MobArenav2] Admin forced the arena to skip to Wave " + targetWave + "!");
+
+        ConfigurationSection targetWaveConfig = arena.getWaveConfig(targetWave);
+        String waveType = (targetWaveConfig != null) ? targetWaveConfig.getString("wave_types", "mob").toLowerCase() : "mob";
+
+        spawnWave(arena, targetWave, targetWaveConfig, waveType);
+    }
+
     private void concludeVote(Arena arena) {
         if (!arena.isVoting()) return;
         arena.setVoting(false);
@@ -436,17 +521,52 @@ public class WaveManager {
     }
 
     private void spawnWave(Arena arena, int waveNumber, ConfigurationSection targetWave, String waveType) {
-        if (waveType.equalsIgnoreCase("supply") || waveType.equalsIgnoreCase("bonus")) {
-            arena.broadcastMessage("§b§lA Supply Drop has arrived!");
-            String supplyId = (targetWave != null) ? targetWave.getString("supply-id") : null;
+        try {
+            if (waveType.equalsIgnoreCase("supply") || waveType.equalsIgnoreCase("bonus")) {
 
-            if (supplyId != null) {
-                List<ItemStack> items = plugin.getSupplyManager().getSupplyItems(supplyId);
-                if (!items.isEmpty()) {
+                if (!arena.getActiveSupplies().isEmpty()) {
+                    for (Location oldLoc : arena.getActiveSupplies()) {
+                        Block left = oldLoc.getBlock();
+                        Block right = oldLoc.clone().add(1, 0, 0).getBlock();
+                        if (left.getState() instanceof Chest c) c.getInventory().clear();
+                        if (right.getState() instanceof Chest c) c.getInventory().clear();
+                        left.setType(Material.AIR);
+                        right.setType(Material.AIR);
+                    }
+                    arena.getActiveSupplies().clear();
+                }
+
+                arena.broadcastMessage("§b§lA Supply Drop has arrived!");
+                String supplyId = (targetWave != null) ? targetWave.getString("supply-id") : null;
+
+                if (supplyId != null) {
+                    List<ItemStack> items = plugin.getSupplyManager().getSupplyItems(supplyId);
+                    if (items.isEmpty()) {
+                        arena.broadcastMessage("§c⚠ [Warning] Admin configured an invalid supply ID: " + supplyId + "!");
+                        plugin.getLogger().warning("Arena " + arena.getName() + " failed to drop supply. ID '" + supplyId + "' is empty or invalid!");
+                        return;
+                    }
+
                     Location loc = getSafeSupplyLocation(arena);
-                    loc.getBlock().setType(Material.CHEST);
+                    Block leftBlock = loc.getBlock();
+                    Block rightBlock = loc.clone().add(1, 0, 0).getBlock();
 
-                    if (loc.getBlock().getState() instanceof Chest chest) {
+                    leftBlock.setType(Material.CHEST);
+                    rightBlock.setType(Material.CHEST);
+
+                    org.bukkit.block.data.type.Chest leftChestData = (org.bukkit.block.data.type.Chest) leftBlock.getBlockData();
+                    org.bukkit.block.data.type.Chest rightChestData = (org.bukkit.block.data.type.Chest) rightBlock.getBlockData();
+
+                    leftChestData.setType(org.bukkit.block.data.type.Chest.Type.LEFT);
+                    rightChestData.setType(org.bukkit.block.data.type.Chest.Type.RIGHT);
+
+                    leftChestData.setFacing(BlockFace.NORTH);
+                    rightChestData.setFacing(BlockFace.NORTH);
+
+                    leftBlock.setBlockData(leftChestData);
+                    rightBlock.setBlockData(rightChestData);
+
+                    if (leftBlock.getState() instanceof Chest chest) {
                         for (ItemStack item : items) {
                             if (item != null) chest.getInventory().addItem(item);
                         }
@@ -455,7 +575,7 @@ public class WaveManager {
                         arena.broadcastMessage("§b[Supply Drop] §eA chest has safely landed at §bX: " + loc.getBlockX() + ", Y: " + loc.getBlockY() + ", Z: " + loc.getBlockZ() + "§e!");
                         arena.broadcastMessage("§c⚠ Loot it quickly before it erupts! ⚠");
 
-                        Location fireworkLoc = loc.clone().add(0.5, 1.0, 0.5);
+                        Location fireworkLoc = loc.clone().add(1.0, 1.0, 0.5);
                         if (fireworkLoc.getWorld() != null) {
                             fireworkLoc.getWorld().spawn(fireworkLoc, org.bukkit.entity.Firework.class, fw -> {
                                 org.bukkit.inventory.meta.FireworkMeta fwm = fw.getFireworkMeta();
@@ -471,131 +591,177 @@ public class WaveManager {
                                 }
                             });
                         }
-
                         for (Player p : arena.getPlayersAsObjects()) {
                             p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_WITHER_SPAWN, 0.5f, 2.0f);
                         }
                     }
                 }
+                return;
             }
-            return;
-        }
 
-        if (waveType.equalsIgnoreCase("boss") || (targetWave != null && targetWave.getBoolean("is-boss", false))) {
-            arena.broadcastMessage("§4§l⚠ BOSS WAVE " + waveNumber + " HAS ARRIVED! ⚠");
-            for (Player p : arena.getPlayersAsObjects()) {
-                p.sendTitle("§4§lBOSS WAVE!", "§cPrepare for battle!", 10, 70, 20);
-                p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_ENDER_DRAGON_GROWL, 1.0f, 0.8f);
+            if (waveType.equalsIgnoreCase("boss") || (targetWave != null && targetWave.getBoolean("is-boss", false))) {
+                arena.broadcastMessage("§4§l⚠ BOSS WAVE " + waveNumber + " HAS ARRIVED! ⚠");
+                for (Player p : arena.getPlayersAsObjects()) {
+                    p.sendTitle("§4§lBOSS WAVE!", "§cPrepare for battle!", 10, 70, 20);
+                    p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_ENDER_DRAGON_GROWL, 1.0f, 0.8f);
+                }
+            } else {
+                arena.broadcastMessage("§e§lWave " + waveNumber + " has begun!");
+                for (Player p : arena.getPlayersAsObjects()) {
+                    p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_ZOMBIE_VILLAGER_CURE, 0.5f, 1.5f);
+                }
             }
-        } else {
-            arena.broadcastMessage("§e§lWave " + waveNumber + " has begun!");
-            for (Player p : arena.getPlayersAsObjects()) {
-                p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_ZOMBIE_VILLAGER_CURE, 0.5f, 1.5f);
-            }
-        }
 
-        int playerCount = arena.getActivePlayers().size();
+            int playerCount = arena.getActivePlayers().size();
 
-        if (targetWave != null) {
-            if (targetWave.contains("mobs")) {
-                ConfigurationSection mobsSection = targetWave.getConfigurationSection("mobs");
-                if (mobsSection != null) {
-                    double globalMultiplier = waveType.equalsIgnoreCase("swarm") ? targetWave.getDouble("mob-multiplier", 1.0) : 1.0;
+            if (targetWave != null) {
+                if (targetWave.contains("mobs")) {
+                    ConfigurationSection mobsSection = targetWave.getConfigurationSection("mobs");
+                    if (mobsSection != null) {
+                        double globalMultiplier = waveType.equalsIgnoreCase("swarm") ? targetWave.getDouble("mob-multiplier", 1.0) : 1.0;
 
-                    for (String mobName : mobsSection.getKeys(false)) {
-                        ConfigurationSection mobSpecificConfig = mobsSection.getConfigurationSection(mobName);
-                        int baseAmount = 1;
-                        if (mobSpecificConfig != null && mobSpecificConfig.contains("amount")) {
-                            baseAmount = mobSpecificConfig.getInt("amount", 1);
-                        } else if (mobsSection.isInt(mobName)) {
-                            baseAmount = mobsSection.getInt(mobName);
+                        for (String mobName : mobsSection.getKeys(false)) {
+                            // =====================================================================
+                            // [FIX BUG #1]: Case-insensitive boss key validation
+                            // Phải duyệt key thay vì dùng .contains() để tránh lệch hoa/thường
+                            // =====================================================================
+                            boolean isBossKey = false;
+                            for (String bossKey : plugin.getBossManager().getBossesConfig().getKeys(false)) {
+                                if (bossKey.equalsIgnoreCase(mobName)) {
+                                    isBossKey = true;
+                                    break;
+                                }
+                            }
+                            if (!isBossKey) {
+                                try {
+                                    org.bukkit.entity.EntityType.valueOf(mobName.toUpperCase());
+                                } catch (Exception ex) {
+                                    plugin.getLogger().warning("[MobArenav2] Skipping invalid mob/boss '" + mobName + "' at Wave " + waveNumber + " in arena " + arena.getName() + "!");
+                                    continue;
+                                }
+                            }
+
+                            ConfigurationSection mobSpecificConfig = mobsSection.getConfigurationSection(mobName);
+                            int baseAmount = 1;
+                            if (mobSpecificConfig != null && mobSpecificConfig.contains("amount")) {
+                                baseAmount = mobSpecificConfig.getInt("amount", 1);
+                            } else if (mobsSection.isInt(mobName)) {
+                                baseAmount = mobsSection.getInt(mobName);
+                            }
+
+                            int amountToSpawn = ArenaMath.calculateSpawnAmount(baseAmount, playerCount, globalMultiplier);
+                            for (int i = 0; i < amountToSpawn; i++) {
+                                mobFactory.spawnArenaMob(arena, mobName, getSmartSpawnLocation(arena), mobSpecificConfig, targetWave);
+                            }
+                        }
+                    }
+                } else {
+                    for (String mobName : targetWave.getKeys(false)) {
+                        if (mobName.equals("waves") || mobName.equals("priority") || mobName.equals("is-boss") || mobName.equals("wave_types") || mobName.equals("wave") || mobName.equals("general-effect") || mobName.equals("maxhp-bonus") || mobName.equals("damage-bonus") || mobName.equals("movement-speed") || mobName.equals("explosion-damage") || mobName.equals("bow-speed") || mobName.equals("after-game") || mobName.equals("supply-id") || mobName.equals("duration")) continue;
+
+                        // [v5.5 FIX]: Also check BossManager for valid boss names
+                        boolean isBossKey = false;
+                        for (String bossKey : plugin.getBossManager().getBossesConfig().getKeys(false)) {
+                            if (bossKey.equalsIgnoreCase(mobName)) {
+                                isBossKey = true;
+                                break;
+                            }
+                        }
+                        if (!isBossKey) {
+                            try {
+                                org.bukkit.entity.EntityType.valueOf(mobName.toUpperCase());
+                            } catch (Exception ex) {
+                                plugin.getLogger().warning("[MobArenav2] Skipping invalid mob '" + mobName + "' at Wave " + waveNumber + " in arena " + arena.getName() + "!");
+                                continue;
+                            }
                         }
 
-                        int amountToSpawn = ArenaMath.calculateSpawnAmount(baseAmount, playerCount, globalMultiplier);
+                        int baseAmount = targetWave.getInt(mobName, 1);
+                        int amountToSpawn = ArenaMath.calculateSpawnAmount(baseAmount, playerCount, 1.0);
+
                         for (int i = 0; i < amountToSpawn; i++) {
-                            mobFactory.spawnArenaMob(arena, mobName, getSmartSpawnLocation(arena), mobSpecificConfig, targetWave);
+                            mobFactory.spawnArenaMob(arena, mobName, getSmartSpawnLocation(arena), null, targetWave);
                         }
                     }
                 }
             } else {
-                for (String mobName : targetWave.getKeys(false)) {
-                    if (mobName.equals("waves") || mobName.equals("priority") || mobName.equals("is-boss") || mobName.equals("wave_types") || mobName.equals("wave") || mobName.equals("general-effect") || mobName.equals("maxhp-bonus") || mobName.equals("damage-bonus") || mobName.equals("movement-speed") || mobName.equals("explosion-damage") || mobName.equals("bow-speed") || mobName.equals("after-game") || mobName.equals("supply-id") || mobName.equals("duration")) continue;
-
-                    int baseAmount = targetWave.getInt(mobName, 1);
-                    int amountToSpawn = ArenaMath.calculateSpawnAmount(baseAmount, playerCount, 1.0);
-
-                    for (int i = 0; i < amountToSpawn; i++) {
-                        mobFactory.spawnArenaMob(arena, mobName, getSmartSpawnLocation(arena), null, targetWave);
-                    }
+                int amountToSpawn = ArenaMath.calculateSpawnAmount(5, playerCount, 1.0);
+                for (int i = 0; i < amountToSpawn; i++) {
+                    mobFactory.spawnArenaMob(arena, "ZOMBIE", getSmartSpawnLocation(arena), null, null);
                 }
             }
-        } else {
-            int amountToSpawn = ArenaMath.calculateSpawnAmount(5, playerCount, 1.0);
-            for (int i = 0; i < amountToSpawn; i++) {
-                mobFactory.spawnArenaMob(arena, "ZOMBIE", getSmartSpawnLocation(arena), null, null);
-            }
+        } catch (Exception ex) {
+            plugin.getLogger().severe("[MobArenav2] Critical runtime error occurred while spawning Wave " + waveNumber + " in arena " + arena.getName() + "!");
+            ex.printStackTrace();
         }
     }
 
     private void distributeWaveRewards(Arena arena, int wave) {
-        FileConfiguration config = arena.getConfig();
-        if (config == null || !config.contains("rewards")) return;
-        ConfigurationSection rewardsSection = config.getConfigurationSection("rewards");
-        if (rewardsSection == null) return;
+        try {
+            FileConfiguration config = arena.getConfig();
+            if (config == null || !config.contains("rewards")) return;
+            ConfigurationSection rewardsSection = config.getConfigurationSection("rewards");
+            if (rewardsSection == null) return;
 
-        List<String> rewardsToGive = new ArrayList<>();
+            List<String> rewardsToGive = new ArrayList<>();
 
-        for (String key : rewardsSection.getKeys(false)) {
-            boolean match = false;
+            for (String key : rewardsSection.getKeys(false)) {
+                boolean match = false;
 
-            if (key.equals(String.valueOf(wave))) {
-                match = true;
-            } else if (key.toLowerCase().startsWith("every ")) {
-                try {
-                    String[] parts = key.split(" ");
-                    if (parts.length >= 2) {
-                        int interval = Integer.parseInt(parts[1].trim());
-                        if (interval > 0 && wave % interval == 0) {
-                            match = true;
+                if (key.equals(String.valueOf(wave))) {
+                    match = true;
+                } else if (key.toLowerCase().startsWith("every ")) {
+                    try {
+                        String[] parts = key.split(" ");
+                        if (parts.length >= 2) {
+                            int interval = Integer.parseInt(parts[1].trim());
+                            if (interval > 0 && wave % interval == 0) {
+                                match = true;
+                            }
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+
+                if (match && rewardsSection.isList(key)) {
+                    List<String> rawList = rewardsSection.getStringList(key);
+                    boolean isAfterGame = false;
+                    List<String> cleanRewards = new ArrayList<>();
+
+                    for (String line : rawList) {
+                        String cleanLine = line.trim().toLowerCase();
+                        if (cleanLine.equals("after-game: true") || cleanLine.equals("\"after-game: true\"")) {
+                            isAfterGame = true;
+                        } else if (cleanLine.equals("after-game: false") || cleanLine.equals("\"after-game: false\"")) {
+                            isAfterGame = false;
+                        } else {
+                            if (!cleanLine.startsWith("vault:") && !cleanLine.startsWith("cmd(")) {
+                                plugin.getLogger().warning("[MobArenav2] Unknown reward syntax in arena " + arena.getName() + ": '" + line + "'. Expected 'vault:X' or 'cmd(...)'.");
+                            }
+                            cleanRewards.add(line);
                         }
                     }
-                } catch (NumberFormatException ignored) {}
-            }
 
-            if (match && rewardsSection.isList(key)) {
-                List<String> rawList = rewardsSection.getStringList(key);
-                boolean isAfterGame = false;
-                List<String> cleanRewards = new ArrayList<>();
-
-                for (String line : rawList) {
-                    String cleanLine = line.trim().toLowerCase();
-                    if (cleanLine.equals("after-game: true") || cleanLine.equals("\"after-game: true\"")) {
-                        isAfterGame = true;
-                    } else if (cleanLine.equals("after-game: false") || cleanLine.equals("\"after-game: false\"")) {
-                        isAfterGame = false;
-                    } else {
-                        cleanRewards.add(line);
+                    if (arena.isEndlessMode() == isAfterGame) {
+                        rewardsToGive.addAll(cleanRewards);
                     }
                 }
+            }
 
-                if (arena.isEndlessMode() == isAfterGame) {
-                    rewardsToGive.addAll(cleanRewards);
+            if (rewardsToGive.isEmpty()) return;
+            String rewardString = String.join(",", rewardsToGive);
+
+            for (UUID uuid : arena.getActivePlayers()) {
+                ArenaPlayerProfile profile = arena.getPlayerProfiles().get(uuid);
+                if (profile != null) profile.cacheReward(rewardString);
+
+                Player p = Bukkit.getPlayer(uuid);
+                if (p != null) {
+                    p.sendMessage("§6[MobArenav2] §eYou secured a reward for clearing Wave " + wave + "!");
+                    p.sendMessage("§7(Rewards are stashed and will be given when you leave)");
                 }
             }
-        }
-
-        if (rewardsToGive.isEmpty()) return;
-        String rewardString = String.join(",", rewardsToGive);
-
-        for (UUID uuid : arena.getActivePlayers()) {
-            ArenaPlayerProfile profile = arena.getPlayerProfiles().get(uuid);
-            if (profile != null) profile.cacheReward(rewardString);
-
-            Player p = Bukkit.getPlayer(uuid);
-            if (p != null) {
-                p.sendMessage("§6[MobArenav2] §eYou secured a reward for clearing Wave " + wave + "!");
-                p.sendMessage("§7(Rewards are stashed and will be given when you leave)");
-            }
+        } catch (Exception ex) {
+            plugin.getLogger().warning("[MobArenav2] Failed to distribute rewards for Wave " + wave + " in arena " + arena.getName() + " due to a configuration error.");
         }
     }
 
@@ -623,7 +789,6 @@ public class WaveManager {
         return validSpawns.get(ThreadLocalRandom.current().nextInt(validSpawns.size()));
     }
 
-    // THUẬT TOÁN ĐÃ ĐƯỢC THAY THẾ: Lấy tọa độ hòm thính từ danh sách đã Set
     private Location getSafeSupplyLocation(Arena arena) {
         List<Location> supplyPoints = arena.getSupplypoints();
 

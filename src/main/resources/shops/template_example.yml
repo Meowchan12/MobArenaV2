@@ -1,0 +1,38 @@
+# ==========================================================
+# MOBARENA SHOP - TEMPLATE EXAMPLE FOR ADMINS
+# ----------------------------------------------------------
+# Copy this file to create custom new shops easily!
+# Supported price-type values:
+#   - VAULT          : Uses Vault economy money ($)
+#   - PLAYERPOINTS   : Uses PlayerPoints points
+#   - CUSTOM_COMMAND : Custom input check via PlaceholderAPI & Take command
+# ==========================================================
+
+category:
+  id: "template_example"
+  display-name: "&d&lCUSTOM ADMIN TEMPLATE"
+  material: DIAMOND
+  slot: 28
+  lore:
+    - "&7Copy this template to make custom shops!"
+
+items:
+  example_item:
+    category: "template_example"
+    slot: 22
+    display-name: "&aCustom Admin Item"
+    material: EMERALD
+    lore:
+      - "&7Custom item lore description"
+      - "&fCurrent Level: &e%current_level%/%max_level%"
+      - "&fPrice: &a$%cost%"
+    price-type: VAULT
+    base-cost: 50000.0
+    cost-multiplier: 1.5
+    max-level: 5
+    attribute: GENERIC_MAX_HEALTH
+    base-value: 2.0
+    increment: 2.0
+    output-actions:
+      - "message: &a[Shop] Purchased custom item!"
+      - "sound: ENTITY_PLAYER_LEVELUP 1.0 1.0"

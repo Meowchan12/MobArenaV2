@@ -43,6 +43,13 @@ public class MobAttributeParser {
         }
 
         applyGenericAttribute(mob, Attribute.GENERIC_ATTACK_DAMAGE, damageBonusStr);
+
+        // [FIX BUG #7]: Gắn nhãn NBT để ArenaCombatListener có thể đọc và tính Xuyên Giáp + Nhân Sát Thương Vũ Khí
+        if (damageBonusStr != null && !damageBonusStr.isEmpty()) {
+            NamespacedKey dmgKey = new NamespacedKey(plugin, "ma_damage_bonus");
+            mob.getPersistentDataContainer().set(dmgKey, PersistentDataType.STRING, damageBonusStr);
+        }
+
         applyGenericAttribute(mob, Attribute.GENERIC_MOVEMENT_SPEED, speedBonusStr);
 
         applyExplosionBonus(mob, explosionBonusStr);
@@ -60,22 +67,57 @@ public class MobAttributeParser {
     public void applyBossAttributes(LivingEntity mob, ConfigurationSection bossConfig) {
         if (mob == null || !mob.isValid() || bossConfig == null) return;
 
-        if (bossConfig.contains("HP") && mob.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
-            double hp = bossConfig.getDouble("HP");
+        // =====================================================================
+        // [FIX BUG #2]: MULTI-ALIAS KEY — Đọc linh hoạt HP/hp/max-hp
+        // =====================================================================
+        String hpKey = bossConfig.contains("HP") ? "HP" : (bossConfig.contains("hp") ? "hp" : (bossConfig.contains("max-hp") ? "max-hp" : null));
+        if (hpKey != null && mob.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
+            double hp = bossConfig.getDouble(hpKey);
             mob.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(hp);
             mob.setHealth(hp);
         }
 
-        if (bossConfig.contains("Damage") && mob.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE) != null) {
-            mob.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE).setBaseValue(bossConfig.getDouble("Damage"));
+        // =====================================================================
+        // [FIX BUG #2]: MULTI-ALIAS KEY — Đọc linh hoạt Damage/damage
+        // =====================================================================
+        String dmgKey = bossConfig.contains("Damage") ? "Damage" : (bossConfig.contains("damage") ? "damage" : null);
+        if (dmgKey != null && mob.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE) != null) {
+            mob.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE).setBaseValue(bossConfig.getDouble(dmgKey));
         }
 
-        if (bossConfig.contains("Equip")) {
-            applyEquipment(mob, bossConfig.getStringList("Equip"));
+        // =====================================================================
+        // [FIX BUG #2]: MULTI-ALIAS KEY — Đọc linh hoạt Equip/equip
+        // =====================================================================
+        String equipKey = bossConfig.contains("Equip") ? "Equip" : (bossConfig.contains("equip") ? "equip" : null);
+        if (equipKey != null) {
+            applyEquipment(mob, bossConfig.getStringList(equipKey));
         }
 
-        if (bossConfig.contains("effect-bonus")) {
-            applyPotionEffects(mob, bossConfig.getString("effect-bonus"));
+        // =====================================================================
+        // [FIX BUG #2]: MULTI-ALIAS KEY — Đọc linh hoạt effect-bonus/effect
+        // =====================================================================
+        String effectKey = bossConfig.contains("effect-bonus") ? "effect-bonus" : (bossConfig.contains("effect") ? "effect" : null);
+        if (effectKey != null) {
+            applyPotionEffects(mob, bossConfig.getString(effectKey));
+        }
+
+        // =====================================================================
+        // [v5.6 FEATURE]: BOSS RANGED DAMAGE MULTIPLIER & ARROW PENETRATION
+        // For bow/crossbow bosses - configurable ranged damage and penetration
+        // =====================================================================
+        String rangedDmgKey = bossConfig.contains("ranged-damage-multiplier") ? "ranged-damage-multiplier" : 
+                             (bossConfig.contains("ranged-damage") ? "ranged-damage" : null);
+        if (rangedDmgKey != null) {
+            double rangedMult = bossConfig.getDouble(rangedDmgKey, 1.0);
+            NamespacedKey rdKey = new NamespacedKey(plugin, "ma_boss_ranged_mult");
+            mob.getPersistentDataContainer().set(rdKey, PersistentDataType.DOUBLE, rangedMult);
+        }
+
+        String arrowPenKey = bossConfig.contains("arrow-penetration") ? "arrow-penetration" : null;
+        if (arrowPenKey != null) {
+            double pen = bossConfig.getDouble(arrowPenKey, 0.0);
+            NamespacedKey apKey = new NamespacedKey(plugin, "ma_boss_arrow_pen");
+            mob.getPersistentDataContainer().set(apKey, PersistentDataType.DOUBLE, pen);
         }
     }
 
@@ -133,19 +175,14 @@ public class MobAttributeParser {
         mob.getPersistentDataContainer().set(key, PersistentDataType.STRING, bonusStr);
     }
 
-    // ==========================================
-    // VÁ LỖI: Đồng bộ hóa xử lý đồ với ItemParser
-    // ==========================================
     private void applyEquipment(LivingEntity mob, List<String> equips) {
-        if (mob.getEquipment() == null) return;
+        if (mob == null || mob.getEquipment() == null) return;
 
         for (String eqLine : equips) {
             if (eqLine == null || eqLine.isEmpty()) continue;
 
-            // Kiểm tra tay cầm (Offhand)
             boolean isOffhand = eqLine.toUpperCase().contains("OFF_HAND");
 
-            // Xử lý Tỷ lệ rớt (Chance)
             int chance = 100;
             if (eqLine.contains("%")) {
                 String[] parts = eqLine.split("%");
@@ -154,30 +191,28 @@ public class MobAttributeParser {
                 } catch (NumberFormatException ignored) {}
             }
 
-            // Gieo xúc xắc (RNG)
             if (ThreadLocalRandom.current().nextInt(100) >= chance) continue;
 
-            // Nhờ ItemParser dịch chuỗi thành ItemStack hoàn chỉnh (Bao gồm cả CustomModelData)
             ItemStack item = ItemParser.parseItem(eqLine);
             if (item == null || item.getType() == Material.AIR) continue;
 
             String matName = item.getType().name();
 
-            // Mặc giáp / Cầm vũ khí
-            if (isOffhand) mob.getEquipment().setItemInOffHand(item);
-            else if (matName.endsWith("_HELMET")) mob.getEquipment().setHelmet(item);
-            else if (matName.endsWith("_CHESTPLATE")) mob.getEquipment().setChestplate(item);
-            else if (matName.endsWith("_LEGGINGS")) mob.getEquipment().setLeggings(item);
-            else if (matName.endsWith("_BOOTS")) mob.getEquipment().setBoots(item);
-            else mob.getEquipment().setItemInMainHand(item);
+            try {
+                if (isOffhand) mob.getEquipment().setItemInOffHand(item);
+                else if (matName.endsWith("_HELMET")) mob.getEquipment().setHelmet(item);
+                else if (matName.endsWith("_CHESTPLATE")) mob.getEquipment().setChestplate(item);
+                else if (matName.endsWith("_LEGGINGS")) mob.getEquipment().setLeggings(item);
+                else if (matName.endsWith("_BOOTS")) mob.getEquipment().setBoots(item);
+                else mob.getEquipment().setItemInMainHand(item);
 
-            // Tắt rớt đồ Vanilla để nhường cho Custom Loot
-            mob.getEquipment().setItemInMainHandDropChance(0f);
-            mob.getEquipment().setItemInOffHandDropChance(0f);
-            mob.getEquipment().setHelmetDropChance(0f);
-            mob.getEquipment().setChestplateDropChance(0f);
-            mob.getEquipment().setLeggingsDropChance(0f);
-            mob.getEquipment().setBootsDropChance(0f);
+                mob.getEquipment().setItemInMainHandDropChance(0f);
+                mob.getEquipment().setItemInOffHandDropChance(0f);
+                mob.getEquipment().setHelmetDropChance(0f);
+                mob.getEquipment().setChestplateDropChance(0f);
+                mob.getEquipment().setLeggingsDropChance(0f);
+                mob.getEquipment().setBootsDropChance(0f);
+            } catch (Exception ignored) {}
         }
     }
 

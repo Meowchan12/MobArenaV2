@@ -107,7 +107,9 @@ public class ArenaPlayerProfile {
 
         if (accumulatedVaultMoney > 0 && plugin.getEconomy() != null) {
             plugin.getEconomy().depositPlayer(player, accumulatedVaultMoney);
-            player.sendMessage("§a[MobArenav2] §7You received §e$" + accumulatedVaultMoney + " §7for your efforts!");
+
+            java.text.DecimalFormat df = new java.text.DecimalFormat("#,###");
+            player.sendMessage("§a[MobArenav2] §7You received §e$" + df.format(accumulatedVaultMoney) + " §7for your efforts!");
             receivedAnything = true;
         }
 

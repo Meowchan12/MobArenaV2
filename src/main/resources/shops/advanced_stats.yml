@@ -1,0 +1,134 @@
+# ==========================================================
+# MOBARENA SHOP - ADVANCED COMBAT STATS
+# ----------------------------------------------------------
+# Custom stat upgrades that enhance gameplay mechanics
+# These stats stack with existing upgrade system
+# ==========================================================
+
+category:
+  id: "advanced_stats"
+  display-name: "&#FFAA00&lADVANCED COMBAT STATS"
+  material: DIAMOND_SWORD
+  slot: 24
+  lore:
+    - "&7&m---------------------"
+    - "&fAdvanced combat upgrades for skilled warriors."
+    - "&b&l✦ Dodge, Cooldowns, and more!"
+    - "&7&m---------------------"
+
+items:
+  perm_dodge:
+    category: "advanced_stats"
+    slot: 20
+    display-name: "&#FFAA00&lPhantom Reflexes &8[+0.2% Dodge]"
+    material: FEATHER
+    lore:
+      - "&7&m---------------------"
+      - "&fPermanently increases your Dodge chance inside MobArena."
+      - "&b&l✦ Stacks with Upgrade System dodge!"
+      - "&fCurrent Dodge Bonus: &a+%current_value%%"
+      - "&fNext Level Dodge Bonus: &a+%next_value%%"
+      - "&eMax: 1.2% additional dodge chance"
+      - "&7&m---------------------"
+    price-type: VAULT
+    base-cost: 250000.0
+    cost-multiplier: 2.0
+    max-level: 6
+    attribute: CUSTOM_DODGE
+    base-value: 0.2
+    increment: 0.2
+    output-actions:
+      - "message: &a[MobArena Shop] Upgraded Phantom Reflexes to Level %level%!"
+      - "sound: ENTITY_ENDERMAN_TELEPORT 1.0 2.0"
+
+  perm_special_reduce:
+    category: "advanced_stats"
+    slot: 22
+    display-name: "&#00CCFF&lTemporal Mastery &8[-5% Cooldown]"
+    material: CLOCK
+    lore:
+      - "&7&m---------------------"
+      - "&fReduces cooldown of all special abilities and upgrades."
+      - "&fCurrent Reduction: &b-%current_value%%"
+      - "&fNext Level Reduction: &b-%next_value%%"
+      - "&eMax: 25% cooldown reduction"
+      - "&7&m---------------------"
+    price-type: VAULT
+    base-cost: 300000.0
+    cost-multiplier: 2.2
+    max-level: 5
+    attribute: CUSTOM_COOLDOWN_REDUCE
+    base-value: 5.0
+    increment: 5.0
+    output-actions:
+      - "message: &a[MobArena Shop] Upgraded Temporal Mastery to Level %level%!"
+      - "sound: BLOCK_BEACON_ACTIVATE 1.0 1.5"
+
+  perm_lifesteal_boost:
+    category: "advanced_stats"
+    slot: 24
+    display-name: "&#FF3333&lBlood Pact &8[+0.5% Lifesteal]"
+    material: REDSTONE
+    lore:
+      - "&7&m---------------------"
+      - "&fPermanently increases your Lifesteal trigger chance."
+      - "&b&l✦ Stacks with Vampiric Strike upgrade!"
+      - "&fCurrent Lifesteal Bonus: &c+%current_value%%"
+      - "&fNext Level Lifesteal Bonus: &c+%next_value%%"
+      - "&7&m---------------------"
+    price-type: VAULT
+    base-cost: 200000.0
+    cost-multiplier: 1.8
+    max-level: 3
+    attribute: CUSTOM_LIFESTEAL_BOOST
+    base-value: 0.5
+    increment: 0.5
+    output-actions:
+      - "message: &a[MobArena Shop] Upgraded Blood Pact to Level %level%!"
+      - "sound: ENTITY_WITCH_DRINK 1.0 1.5"
+
+  perm_crit_boost:
+    category: "advanced_stats"
+    slot: 30
+    display-name: "&#FFD700&lPrecision Edge &8[+0.3% Crit]"
+    material: GOLDEN_SWORD
+    lore:
+      - "&7&m---------------------"
+      - "&fPermanently increases your Critical Strike chance."
+      - "&b&l✦ Stacks with Critical Strike upgrade!"
+      - "&fCurrent Crit Bonus: &6+%current_value%%"
+      - "&fNext Level Crit Bonus: &6+%next_value%%"
+      - "&7&m---------------------"
+    price-type: VAULT
+    base-cost: 250000.0
+    cost-multiplier: 2.0
+    max-level: 3
+    attribute: CUSTOM_CRIT_BOOST
+    base-value: 0.3
+    increment: 0.3
+    output-actions:
+      - "message: &a[MobArena Shop] Upgraded Precision Edge to Level %level%!"
+      - "sound: ENTITY_PLAYER_ATTACK_CRIT 1.0 1.5"
+
+  perm_armor_toughness:
+    category: "advanced_stats"
+    slot: 32
+    display-name: "&#AAAAFF&lAdamantine Skin &8[+0.5 Toughness]"
+    material: NETHERITE_INGOT
+    lore:
+      - "&7&m---------------------"
+      - "&fPermanently increases your Armor Toughness."
+      - "&fReduces high-damage attacks effectiveness."
+      - "&fCurrent Toughness: &9+%current_value%"
+      - "&fNext Level Toughness: &9+%next_value%"
+      - "&7&m---------------------"
+    price-type: VAULT
+    base-cost: 180000.0
+    cost-multiplier: 1.7
+    max-level: 4
+    attribute: GENERIC_ARMOR_TOUGHNESS
+    base-value: 0.5
+    increment: 0.5
+    output-actions:
+      - "message: &a[MobArena Shop] Upgraded Adamantine Skin to Level %level%!"
+      - "sound: ITEM_ARMOR_EQUIP_NETHERITE 1.0 1.2"

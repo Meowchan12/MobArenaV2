@@ -10,6 +10,14 @@ authors: [Meowchan12]
 depend: [Vault]
 softdepend: [PlaceholderAPI, MythicMobs]
 
+permissions:
+  mobarenav2.admin:
+    description: Grants full administrative access to MobArenav2
+    default: op
+  mobarenav2.bypass.arenalock:
+    description: Bypasses arena unlock requirements
+    default: op
+
 commands:
   ma:
     description: Core command for MobArenav2

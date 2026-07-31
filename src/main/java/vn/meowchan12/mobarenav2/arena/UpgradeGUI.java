@@ -51,13 +51,9 @@ public class UpgradeGUI implements Listener {
         return ChatColor.translateAlternateColorCodes('&', text);
     }
 
-    // ==========================================
-    // MENU XEM TRƯỚC UPGRADES (PREVIEW) - QoL
-    // ==========================================
     public static void openPreview(Player player, MobArenav2 plugin) {
         Inventory gui = Bukkit.createInventory(null, 54, "§0§l📜 UPGRADE DIRECTORY");
 
-        // 1. Vẽ dải phân cách bằng Kính đen ở giữa (Row 4: Slot 27 đến 35)
         ItemStack glass = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
         ItemMeta glassMeta = glass.getItemMeta();
         if (glassMeta != null) {
@@ -69,10 +65,8 @@ public class UpgradeGUI implements Listener {
         }
 
         List<UpgradeData> pool = plugin.getUpgradeManager().getAvailableUpgrades();
-
-        // 2. Con trỏ tự động chạy nếu không set Slot cứng
-        int normalAutoSlot = 0;  // Quét từ ô đầu tiên cho đồ Normal
-        int superAutoSlot = 36;  // Quét từ Row 5 (dưới dải kính) cho đồ Super
+        int normalAutoSlot = 0;
+        int superAutoSlot = 36;
 
         for (UpgradeData data : pool) {
             ItemStack item = new ItemStack(data.material);
@@ -92,7 +86,6 @@ public class UpgradeGUI implements Listener {
                 }
                 meta.setLore(coloredLore);
 
-                // Thêm hiệu ứng GLINT (phát sáng) cho Super Upgrades
                 if (isSuper) {
                     meta.addEnchant(org.bukkit.enchantments.Enchantment.UNBREAKING, 1, true);
                     meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
@@ -101,12 +94,9 @@ public class UpgradeGUI implements Listener {
                 item.setItemMeta(meta);
             }
 
-            // 3. Logic xếp đồ vào Slot
             if (data.slot != -1 && data.slot < 53) {
-                // Ưu tiên 1: Set cứng trong upgrades.yml
                 gui.setItem(data.slot, item);
             } else {
-                // Ưu tiên 2: Tự động xếp gọn gàng theo khu vực
                 if (isSuper) {
                     while (superAutoSlot < 53 && gui.getItem(superAutoSlot) != null) superAutoSlot++;
                     if (superAutoSlot < 53) gui.setItem(superAutoSlot, item);
@@ -117,7 +107,6 @@ public class UpgradeGUI implements Listener {
             }
         }
 
-        // Nút Đóng
         ItemStack closeBtn = new ItemStack(Material.BARRIER);
         ItemMeta closeMeta = closeBtn.getItemMeta();
         if (closeMeta != null) {
@@ -141,7 +130,7 @@ public class UpgradeGUI implements Listener {
 
         Inventory inv = Bukkit.createInventory(null, 27, title);
 
-        int maxSlots = plugin.getUpgradeManager().getMaxSlots(player, profile.getSelectedClass());
+        int maxSlots = plugin.getUpgradeManager().getMaxSlots(player, profile.getSelectedClass(), arena);
         int usedSlots = plugin.getUpgradeManager().getUsedSlots(profile);
         boolean isFullSlot = usedSlots >= maxSlots;
 
@@ -250,7 +239,6 @@ public class UpgradeGUI implements Listener {
     public void onClick(InventoryClickEvent event) {
         String title = event.getView().getTitle();
 
-        // Ngăn click vào GUI Preview
         if (title.contains("UPGRADE DIRECTORY")) {
             event.setCancelled(true);
             if (event.getCurrentItem() != null && event.getCurrentItem().getType() == Material.BARRIER) {
@@ -279,7 +267,6 @@ public class UpgradeGUI implements Listener {
                 } else {
                     applyUpgrade(player, upgradeId);
 
-                    // --- BÁO CÁO QoL: HIỂN THỊ DANH SÁCH UPGRADE ---
                     Arena arena = plugin.getArenaManager().getArenaByPlayer(player);
                     if (arena != null) {
                         ArenaPlayerProfile profile = arena.getPlayerProfiles().get(player.getUniqueId());
@@ -296,6 +283,12 @@ public class UpgradeGUI implements Listener {
                         for (Map.Entry<String, Integer> entry : owned.entrySet()) {
                             UpgradeData uData = plugin.getUpgradeManager().getUpgradeData(entry.getKey());
                             String name = (uData != null) ? uData.displayName : entry.getKey();
+
+                            if (uData != null) {
+                                name = name.replace("%current_level%", String.valueOf(entry.getValue()))
+                                        .replace("%max_level%", String.valueOf(uData.maxLevel));
+                            }
+
                             player.sendMessage(" §7• " + colorize(name) + " §8[Lv." + entry.getValue() + "]");
                         }
                         player.sendMessage("§8§m----------------------------------");
@@ -303,6 +296,9 @@ public class UpgradeGUI implements Listener {
 
                     player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 2.0f);
                 }
+
+                // [FIX BUG #4]: Đánh dấu người chơi đã chọn thành công Upgrade trước khi tắt GUI
+                vn.meowchan12.mobarenav2.listener.GUIListener.completedUpgradeSelection.add(player.getUniqueId());
                 player.closeInventory();
             }
         }

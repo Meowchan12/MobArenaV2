@@ -3,6 +3,7 @@ package vn.meowchan12.mobarenav2.arena;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.Registry;
@@ -68,6 +69,13 @@ public class BossSkillExecutor {
 
                 NamespacedKey saKey = new NamespacedKey(plugin, "ma_super_arrow");
                 boss.getPersistentDataContainer().set(saKey, PersistentDataType.STRING, saDmg + ";" + saTDmg + ";" + activeUntil);
+
+                // [v5.6] Add explosion tag for enhanced AoE
+                double superExpRadius = skillConfig.getDouble("explosion-radius", 2.5);
+                if (superExpRadius > 0) {
+                    NamespacedKey expKey = new NamespacedKey(plugin, "ma_arrow_explosion_radius");
+                    boss.getPersistentDataContainer().set(expKey, PersistentDataType.DOUBLE, superExpRadius);
+                }
                 bossLoc.getWorld().spawnParticle(Particle.FLAME, bossLoc.clone().add(0, 2, 0), 30, 0.5, 0.5, 0.5, 0.1);
                 break;
 
@@ -107,6 +115,11 @@ public class BossSkillExecutor {
 
                     NamespacedKey uaKey = new NamespacedKey(plugin, "ma_arrow_type");
                     arrow.getPersistentDataContainer().set(uaKey, PersistentDataType.STRING, "ultimate;" + uDmg + ";" + uTDmg + ";" + effectStr);
+                    double ultExpRadius = skillConfig.getDouble("explosion-radius", 3.5);
+                    if (ultExpRadius > 0) {
+                        NamespacedKey expKey = new NamespacedKey(plugin, "ma_arrow_explosion_radius");
+                        arrow.getPersistentDataContainer().set(expKey, PersistentDataType.DOUBLE, ultExpRadius);
+                    }
                     p.getWorld().spawnParticle(Particle.PORTAL, spawnLoc, 50, 0.5, 0.5, 0.5, 0.1);
                 }
                 break;
@@ -123,7 +136,10 @@ public class BossSkillExecutor {
 
                 for (Entity e : boss.getNearbyEntities(kbRad, kbRad, kbRad)) {
                     if (e instanceof Player p && arena.getActivePlayers().contains(p.getUniqueId()) && arena.containsLocation(p.getLocation())) {
-                        p.damage(kbDmg, boss);
+                        // [v5.6] True Damage
+                        double newHp = p.getHealth() - kbDmg;
+                        if (newHp <= 0) p.damage(9999.0);
+                        else p.setHealth(newHp);
                         Vector dir = p.getLocation().toVector().subtract(bossLoc.toVector()).normalize();
                         p.setVelocity(dir.multiply(kbPower).setY(kbHeight));
 
@@ -164,36 +180,96 @@ public class BossSkillExecutor {
                 break;
 
             case "FREEZE":
-                int fTime = skillConfig.getInt("freeze-time", 3);
-                double hpLoss = skillConfig.getDouble("hp-loss-percent", 35.0);
+                int fTime = skillConfig.getInt("freeze-time", 4);
+                double baseLoss = skillConfig.getDouble("hp-loss-percent", 35.0);
+                double hpLossMin = skillConfig.getDouble("hp-loss-percent-min", baseLoss);
+                double hpLossMax = skillConfig.getDouble("hp-loss-percent-max", Math.max(baseLoss, 40.0));
+                double freezeMinRange = skillConfig.getDouble("min-range", 0.0);
+                double freezeMaxRange = skillConfig.getDouble("max-range", skillConfig.getDouble("radius", 32.0));
                 List<String> fEffects = skillConfig.getStringList("after-effects");
 
-                bossLoc.getWorld().playSound(bossLoc, Sound.ENTITY_ENDER_DRAGON_SHOOT, 1.0f, 2.0f);
+                bossLoc.getWorld().playSound(bossLoc, Sound.ENTITY_WARDEN_SONIC_BOOM, 2.0f, 0.3f);
+                bossLoc.getWorld().spawnParticle(Particle.SNOWFLAKE, bossLoc, 200, 5.0, 3.0, 5.0, 0.1);
 
                 for (Player p : arena.getPlayersAsObjects()) {
                     if (!arena.containsLocation(p.getLocation())) continue;
+                    double dist = p.getLocation().distance(bossLoc);
+                    if (dist < freezeMinRange || dist > freezeMaxRange) continue;
 
+                    // Absolute freeze - cannot move, dash, or use lunge
                     p.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, fTime * 20, 255, false, false));
                     p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, fTime * 20, 128, false, false));
-                    p.sendMessage("§b❄ YOU HAVE BEEN FROZEN!");
-                    p.getWorld().spawnParticle(Particle.SNOWFLAKE, p.getLocation(), 50, 1.0, 1.0, 1.0, 0.0);
+                    p.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, fTime * 20, 255, false, false));
+                    p.setVelocity(new Vector(0, 0, 0));
+                    p.sendMessage("§b❄ §l[ABSOLUTE FREEZE] §bYou have been frozen solid!");
+                    p.getWorld().spawnParticle(Particle.SNOWFLAKE, p.getLocation(), 100, 1.0, 2.0, 1.0, 0.0);
+                    p.playSound(p.getLocation(), Sound.BLOCK_GLASS_BREAK, 2.0f, 0.5f);
 
+                    // Spawn temporary ice blocks
+                    Location pLoc = p.getLocation();
+                    List<Location> iceBlocks = new ArrayList<>();
+                    Location ice1 = pLoc.clone().add(1, 0, 0);
+                    Location ice2 = pLoc.clone().add(-1, 0, 0);
+                    
+                    if (ice1.getBlock().getType().isAir()) {
+                        ice1.getBlock().setType(Material.BLUE_ICE);
+                        iceBlocks.add(ice1);
+                    }
+                    if (ice2.getBlock().getType().isAir()) {
+                        ice2.getBlock().setType(Material.BLUE_ICE);
+                        iceBlocks.add(ice2);
+                    }
+
+                    // Freeze tick - reset velocity every tick
+                    new BukkitRunnable() {
+                        int ticks = 0;
+                        @Override
+                        public void run() {
+                            if (!p.isOnline() || !arena.getActivePlayers().contains(p.getUniqueId()) || ticks >= fTime * 20) {
+                                this.cancel();
+                                return;
+                            }
+                            p.setVelocity(new Vector(0, p.getVelocity().getY(), 0)); // Lock X/Z movement
+                            if (ticks % 10 == 0) {
+                                p.getWorld().spawnParticle(Particle.SNOWFLAKE, p.getLocation().add(0, 1, 0), 5, 0.3, 0.5, 0.3, 0);
+                            }
+                            ticks++;
+                        }
+                    }.runTaskTimer(plugin, 0L, 1L);
+
+                    // After freeze: apply effects + true damage + remove ice
                     Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        if (p.isOnline() && arena.getActivePlayers().contains(p.getUniqueId())) {
-                            p.getWorld().playSound(p.getLocation(), Sound.BLOCK_GLASS_BREAK, 1.5f, 1.0f);
+                        // Remove ice blocks
+                        for (Location iceLoc : iceBlocks) {
+                            if (iceLoc.getBlock().getType() == Material.BLUE_ICE) {
+                                iceLoc.getBlock().setType(Material.AIR);
+                                iceLoc.getWorld().spawnParticle(Particle.BLOCK, iceLoc.clone().add(0.5, 0.5, 0.5), 20, 0.3, 0.3, 0.3, 0, Material.BLUE_ICE.createBlockData());
+                            }
+                        }
 
+                        if (p.isOnline() && arena.getActivePlayers().contains(p.getUniqueId())) {
+                            p.getWorld().playSound(p.getLocation(), Sound.BLOCK_GLASS_BREAK, 2.0f, 1.5f);
+                            p.getWorld().spawnParticle(Particle.SNOWFLAKE, p.getLocation(), 80, 1.5, 2.0, 1.5, 0.1);
+
+                            // True damage: 35-40% max HP
                             AttributeInstance maxHpAttr = p.getAttribute(Attribute.GENERIC_MAX_HEALTH);
                             double maxHp = (maxHpAttr != null) ? maxHpAttr.getValue() : 20.0;
-                            double loss = maxHp * (hpLoss / 100.0);
-
+                            double lossPercent = ThreadLocalRandom.current().nextDouble(hpLossMin, hpLossMax);
+                            double loss = maxHp * (lossPercent / 100.0);
                             double newHp = p.getHealth() - loss;
                             if (newHp <= 0) p.damage(9999.0);
                             else p.setHealth(newHp);
 
+                            p.sendMessage("§c❄ Freeze shattered! Lost §4" + String.format("%.0f", lossPercent) + "% §cMax HP!");
+
+                            // After-effects
                             for (String eff : fEffects) {
                                 String[] data = eff.trim().split(":");
                                 if (data.length >= 2) {
                                     PotionEffectType pType = Registry.POTION_EFFECT_TYPE.get(NamespacedKey.minecraft(data[0].toLowerCase()));
+                                    if (pType == null) {
+                                        try { pType = PotionEffectType.getByName(data[0].toUpperCase()); } catch (Exception ignored) {}
+                                    }
                                     if (pType != null) {
                                         p.addPotionEffect(new PotionEffect(pType, Integer.parseInt(data[1]), data.length > 2 ? Integer.parseInt(data[2]) : 0));
                                     }
@@ -206,14 +282,24 @@ public class BossSkillExecutor {
 
             case "AREA_DAMAGE":
                 double radius = skillConfig.getDouble("radius", 5.0);
-                double damage = skillConfig.getDouble("damage", 5.0);
+                double damage = skillConfig.getDouble("damage", 8.0);
+                double eqPen = skillConfig.getDouble("armor-penetration", skillConfig.getDouble("true-damage-percent", 0.90));
 
                 bossLoc.getWorld().spawnParticle(Particle.EXPLOSION, bossLoc, 5, 1.0, 0.5, 1.0, 0.0);
                 bossLoc.getWorld().playSound(bossLoc, Sound.ENTITY_GENERIC_EXPLODE, 1.5f, 0.5f);
 
                 for (Entity e : boss.getNearbyEntities(radius, radius, radius)) {
                     if (e instanceof Player p && arena.getActivePlayers().contains(p.getUniqueId()) && arena.containsLocation(p.getLocation())) {
-                        p.damage(damage, boss);
+                        double trueDmg = damage * eqPen;
+                        double physDmg = damage - trueDmg;
+
+                        if (physDmg > 0) p.damage(physDmg, boss);
+                        if (trueDmg > 0) {
+                            double newHp = p.getHealth() - trueDmg;
+                            if (newHp <= 0) p.damage(9999.0);
+                            else p.setHealth(newHp);
+                        }
+                        p.getWorld().spawnParticle(Particle.CRIT, p.getLocation().add(0, 1, 0), 10);
                     }
                 }
                 break;
@@ -328,8 +414,27 @@ public class BossSkillExecutor {
                 }
                 break;
 
-            case "INVULNERABLE":
+            case "INVULNERABLE": {
+                int godModeDur = skillConfig.getInt("duration", 5);
+                long godExpiry = System.currentTimeMillis() + (godModeDur * 1000L);
+
+                NamespacedKey godKey = new NamespacedKey(plugin, "ma_invulnerable");
+                boss.getPersistentDataContainer().set(godKey, PersistentDataType.LONG, godExpiry);
+
+                boss.setGlowing(true);
+                bossLoc.getWorld().playSound(bossLoc, Sound.ITEM_SHIELD_BLOCK, 2.0f, 0.5f);
+                bossLoc.getWorld().playSound(bossLoc, Sound.BLOCK_BEACON_ACTIVATE, 1.5f, 1.5f);
+                bossLoc.getWorld().spawnParticle(Particle.END_ROD, bossLoc.clone().add(0, 1, 0), 50, 0.8, 1.2, 0.8, 0.1);
+
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    if (boss.isValid()) {
+                        boss.setGlowing(false);
+                        boss.getPersistentDataContainer().remove(godKey);
+                        boss.getWorld().playSound(boss.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, 1.5f, 1.0f);
+                    }
+                }, godModeDur * 20L);
                 break;
+            }
 
             // ==========================================
             // V2 SKILLS (NEW SYSTEM) - 9 ADVANCED SKILLS
@@ -356,6 +461,7 @@ public class BossSkillExecutor {
                 double eqJump = skillConfig.getDouble("jump-velocity", 1.5);
                 double eqKnockup = skillConfig.getDouble("knockup-power", 1.2);
                 double eqDamage = skillConfig.getDouble("damage", 10.0);
+                double eqSmashPen = skillConfig.getDouble("armor-penetration", skillConfig.getDouble("true-damage-percent", 0.90));
 
                 boss.setVelocity(new Vector(0, eqJump, 0));
 
@@ -372,7 +478,15 @@ public class BossSkillExecutor {
 
                             for (Player p : arena.getPlayersAsObjects()) {
                                 if (arena.containsLocation(p.getLocation()) && p.getLocation().distance(landLoc) <= eqRadius) {
-                                    p.damage(eqDamage, boss);
+                                    double trueDmg = eqDamage * eqSmashPen;
+                                    double physDmg = eqDamage - trueDmg;
+
+                                    if (physDmg > 0) p.damage(physDmg, boss);
+                                    if (trueDmg > 0) {
+                                        double newHp = p.getHealth() - trueDmg;
+                                        if (newHp <= 0) p.damage(9999.0);
+                                        else p.setHealth(newHp);
+                                    }
                                     p.setVelocity(new Vector(0, eqKnockup, 0));
                                 }
                             }
@@ -443,12 +557,28 @@ public class BossSkillExecutor {
                 double rDist = skillConfig.getDouble("ranged-stance.max-target-distance", 20.0);
                 long rInterval = (long) (skillConfig.getDouble("ranged-stance.attack-interval", 1.0) * 20L);
 
-                Vector dashDir = boss.getLocation().getDirection().setY(0.2).normalize().multiply(dashPwr);
-                boss.setVelocity(dashDir);
+                // [THÊM MỚI] Đọc damage từ config
+                double rDamage = skillConfig.getDouble("ranged-stance.damage", 5.0);
+
+                int maxDashTargets = skillConfig.getInt("dash.max-targets", 2);
+                List<Player> dashTargets = new ArrayList<>(arena.getPlayersAsObjects());
+                Collections.shuffle(dashTargets);
+                int dashCount = Math.min(maxDashTargets, dashTargets.size());
+
+                for (int di = 0; di < dashCount; di++) {
+                    Player dashTarget = dashTargets.get(di);
+                    final int dashIndex = di;
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        if (boss.isDead() || !arena.isRunning()) return;
+                        Vector dDir = dashTarget.getLocation().toVector().subtract(boss.getLocation().toVector()).setY(0.2).normalize().multiply(dashPwr);
+                        boss.setVelocity(dDir);
+                        boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 2.0f, 1.5f);
+                        boss.getWorld().spawnParticle(Particle.SONIC_BOOM, boss.getLocation(), 1);
+                    }, di * 25L); // 1.25 seconds between dashes
+                }
 
                 NamespacedKey invKey = new NamespacedKey(plugin, "ma_invulnerable");
                 boss.getPersistentDataContainer().set(invKey, PersistentDataType.LONG, System.currentTimeMillis() + (invulnDur * 1000L));
-                bossLoc.getWorld().playSound(bossLoc, Sound.ENTITY_ENDER_DRAGON_FLAP, 2.0f, 1.5f);
 
                 Bukkit.getScheduler().runTaskLater(plugin, () -> {
                     if (boss.isDead() || !arena.isRunning()) return;
@@ -472,7 +602,15 @@ public class BossSkillExecutor {
                                     Location tEye = target.getEyeLocation();
 
                                     drawLaser(eye, tEye, Particle.DUST, 255, 0, 0);
-                                    target.damage(5.0, boss);
+
+                                    // [v5.6] True Damage - bypasses armor
+                                    double newHp = target.getHealth() - rDamage;
+                                    if (newHp <= 0) {
+                                        target.damage(9999.0);
+                                    } else {
+                                        target.setHealth(newHp);
+                                    }
+
                                     boss.getWorld().playSound(eye, Sound.ENTITY_GUARDIAN_ATTACK, 1.0f, 2.0f);
                                 }
                             }
@@ -524,6 +662,9 @@ public class BossSkillExecutor {
                 double debuffChance = skillConfig.getDouble("debuff.chance", 15.0);
                 List<String> sbEffects = skillConfig.getStringList("debuff.effects");
 
+                // [THÊM MỚI] Đọc damage từ config (Mặc định là 4.0 nếu quên không ghi trong file yaml)
+                double sbDamage = skillConfig.getDouble("damage", 4.0);
+
                 new BukkitRunnable() {
                     int ticks = 0;
                     @Override
@@ -535,8 +676,28 @@ public class BossSkillExecutor {
                             for (Player p : arena.getPlayersAsObjects()) {
                                 if (arena.containsLocation(p.getLocation())) {
                                     if (hitscan) {
+                                        double explosionRadius = skillConfig.getDouble("explosion-radius", 3.0);
+                                        double trueDmgPercent = skillConfig.getDouble("true-damage-percent", 0.80);
+                                        // ... in the hitscan block:
                                         drawLaser(boss.getEyeLocation(), p.getEyeLocation(), Particle.CRIT, 0, 0, 0);
-                                        p.damage(4.0, boss);
+                                        // Explosion at impact
+                                        p.getWorld().spawnParticle(Particle.EXPLOSION, p.getLocation(), 1);
+                                        p.getWorld().playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 1.5f);
+                                        // True damage to target
+                                        double trueDmg = sbDamage * trueDmgPercent;
+                                        double newHp = p.getHealth() - trueDmg;
+                                        if (newHp <= 0) p.damage(9999.0);
+                                        else p.setHealth(newHp);
+                                        // AoE damage to nearby players
+                                        for (Entity nearby : p.getNearbyEntities(explosionRadius, explosionRadius, explosionRadius)) {
+                                            if (nearby instanceof Player np && arena.getActivePlayers().contains(np.getUniqueId())) {
+                                                double aoeDmg = trueDmg * 0.5;
+                                                double nph = np.getHealth() - aoeDmg;
+                                                if (nph <= 0) np.damage(9999.0);
+                                                else np.setHealth(nph);
+                                            }
+                                        }
+
                                         Vector kbDir = p.getLocation().toVector().subtract(boss.getLocation().toVector()).normalize();
                                         p.setVelocity(kbDir.multiply(sbKnockback).setY(0.5));
 
@@ -545,6 +706,10 @@ public class BossSkillExecutor {
                                         }
                                     } else {
                                         Arrow arrow = boss.launchProjectile(Arrow.class);
+
+                                        // [THÊM MỚI] Gán sát thương thẳng vào mũi tên nếu tắt hitscan
+                                        arrow.setDamage(sbDamage);
+
                                         Vector dir = p.getEyeLocation().toVector().subtract(boss.getEyeLocation().toVector()).normalize();
                                         arrow.setVelocity(dir.multiply(2.0));
                                     }
@@ -558,10 +723,11 @@ public class BossSkillExecutor {
 
             case "SAITAMA_PUNCH":
                 long spDur = skillConfig.getInt("duration", 5) * 1000L;
-                double trueDmgAmount = skillConfig.getDouble("true-damage", 5.0);
+                double spDamage = skillConfig.getDouble("damage", skillConfig.getDouble("true-damage", 25.0));
+                double spPen = skillConfig.getDouble("armor-penetration", 0.90);
 
                 NamespacedKey sKey = new NamespacedKey(plugin, "ma_saitama_punch");
-                boss.getPersistentDataContainer().set(sKey, PersistentDataType.STRING, trueDmgAmount + ";" + (System.currentTimeMillis() + spDur));
+                boss.getPersistentDataContainer().set(sKey, PersistentDataType.STRING, spDamage + ";" + spPen + ";" + (System.currentTimeMillis() + spDur));
 
                 boss.getWorld().playSound(boss.getLocation(), Sound.BLOCK_ANVIL_PLACE, 1.0f, 0.5f);
                 boss.getWorld().spawnParticle(Particle.ANGRY_VILLAGER, boss.getLocation().add(0, 2, 0), 10, 0.5, 0.5, 0.5, 0);
@@ -585,6 +751,263 @@ public class BossSkillExecutor {
                         ticks += 10;
                     }
                 }.runTaskTimer(plugin, 0L, 10L);
+                break;
+
+            case "SOUL_DRAIN":
+                double sdRadius = skillConfig.getDouble("radius", 10.0);
+                double sdDrainPercent = skillConfig.getDouble("drain-percent", 10.0);
+                double sdHealMultiplier = skillConfig.getDouble("heal-multiplier", 1.5);
+
+                bossLoc.getWorld().playSound(bossLoc, Sound.ENTITY_WITHER_AMBIENT, 2.0f, 0.5f);
+                double totalDrained = 0;
+
+                for (Player p : arena.getPlayersAsObjects()) {
+                    if (!arena.containsLocation(p.getLocation())) continue;
+                    if (p.getLocation().distance(bossLoc) > sdRadius) continue;
+
+                    AttributeInstance maxHpAttr = p.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                    double maxHp = (maxHpAttr != null) ? maxHpAttr.getValue() : 20.0;
+                    double drain = maxHp * (sdDrainPercent / 100.0);
+                    double newHp = p.getHealth() - drain;
+                    if (newHp <= 0) p.damage(9999.0);
+                    else p.setHealth(newHp);
+
+                    totalDrained += drain;
+                    drawLaser(bossLoc.clone().add(0, 1, 0), p.getLocation().add(0, 1, 0), Particle.DUST, 139, 0, 0);
+                    p.getWorld().spawnParticle(Particle.SCULK_SOUL, p.getLocation().add(0, 1, 0), 15, 0.5, 0.5, 0.5, 0.05);
+                    p.sendMessage("§5☠ Your life force is being drained!");
+                }
+
+                // Heal boss
+                double healAmount = totalDrained * sdHealMultiplier;
+                AttributeInstance bossMaxHpAttr = boss.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                double bossMaxHp = (bossMaxHpAttr != null) ? bossMaxHpAttr.getValue() : 100.0;
+                boss.setHealth(Math.min(boss.getHealth() + healAmount, bossMaxHp));
+                boss.getWorld().spawnParticle(Particle.HEART, boss.getLocation().add(0, 2, 0), 10, 0.5, 0.5, 0.5, 0);
+                break;
+
+            case "SHADOW_CLONE":
+                int cloneCount = skillConfig.getInt("clone-count", 3);
+                int cloneLifespan = skillConfig.getInt("clone-lifespan", 8);
+                double cloneDamage = skillConfig.getDouble("clone-damage", 3.0);
+                String cloneMobType = skillConfig.getString("clone-mob-type", boss.getType().name());
+
+                bossLoc.getWorld().playSound(bossLoc, Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 2.0f, 1.0f);
+                boss.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 20, 0, false, false));
+
+                MobFactory cloneFactory = new MobFactory(plugin);
+                for (int ci = 0; ci < cloneCount; ci++) {
+                    double angle = (2 * Math.PI / cloneCount) * ci;
+                    Location cloneLoc = bossLoc.clone().add(Math.cos(angle) * 3, 0, Math.sin(angle) * 3);
+
+                    try {
+                        org.bukkit.entity.EntityType cloneType = org.bukkit.entity.EntityType.valueOf(cloneMobType.toUpperCase());
+                        LivingEntity clone = (LivingEntity) cloneLoc.getWorld().spawnEntity(cloneLoc, cloneType);
+                        clone.setCustomName(boss.getCustomName() + " §7(Shadow)");
+                        clone.setCustomNameVisible(true);
+                        clone.setMetadata("MA_MOB", new org.bukkit.metadata.FixedMetadataValue(plugin, arena.getName()));
+
+                        AttributeInstance cloneHp = clone.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                        if (cloneHp != null) {
+                            cloneHp.setBaseValue(20.0);
+                            clone.setHealth(20.0);
+                        }
+                        AttributeInstance cloneAtk = clone.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE);
+                        if (cloneAtk != null) cloneAtk.setBaseValue(cloneDamage);
+
+                        clone.getWorld().spawnParticle(Particle.LARGE_SMOKE, cloneLoc, 20, 0.5, 1, 0.5, 0.05);
+                        arena.getActiveMobs().add(clone);
+
+                        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                            if (clone.isValid() && !clone.isDead()) {
+                                clone.getWorld().spawnParticle(Particle.LARGE_SMOKE, clone.getLocation(), 30, 0.5, 1, 0.5, 0.1);
+                                clone.getWorld().playSound(clone.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 2.0f);
+                                clone.remove();
+                                arena.getActiveMobs().remove(clone);
+                            }
+                        }, cloneLifespan * 20L);
+                    } catch (Exception e) {
+                        plugin.getLogger().warning("[MobArenav2] Shadow Clone failed: " + e.getMessage());
+                    }
+                }
+                break;
+
+            case "CURSED_GROUND":
+                double cgRadius = skillConfig.getDouble("radius", 6.0);
+                double cgDmgPerTick = skillConfig.getDouble("damage-per-tick", 3.0);
+                int cgDuration = skillConfig.getInt("duration", 8);
+                List<String> cgEffects = skillConfig.getStringList("effects");
+
+                // Place cursed ground at each player's location
+                List<Location> cursedZones = new ArrayList<>();
+                for (Player p : arena.getPlayersAsObjects()) {
+                    if (arena.containsLocation(p.getLocation())) {
+                        cursedZones.add(p.getLocation().clone());
+                    }
+                }
+
+                bossLoc.getWorld().playSound(bossLoc, Sound.ENTITY_WITHER_SPAWN, 1.0f, 0.3f);
+
+                new BukkitRunnable() {
+                    int ticks = 0;
+                    @Override
+                    public void run() {
+                        if (boss.isDead() || !arena.isRunning() || ticks >= cgDuration * 20) {
+                            this.cancel();
+                            return;
+                        }
+
+                        for (Location zone : cursedZones) {
+                            // Draw particle circle
+                            for (double theta = 0; theta < 2 * Math.PI; theta += Math.PI / 12) {
+                                double x = cgRadius * Math.cos(theta);
+                                double z = cgRadius * Math.sin(theta);
+                                zone.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, zone.clone().add(x, 0.1, z), 1, 0, 0, 0, 0);
+                            }
+
+                            // Damage players inside zone
+                            if (ticks % 20 == 0) {
+                                for (Player p : arena.getPlayersAsObjects()) {
+                                    if (arena.containsLocation(p.getLocation()) && p.getLocation().distance(zone) <= cgRadius) {
+                                        double newHp = p.getHealth() - cgDmgPerTick;
+                                        if (newHp <= 0) p.damage(9999.0);
+                                        else p.setHealth(newHp);
+                                        applyEffects(p, cgEffects);
+                                        p.getWorld().spawnParticle(Particle.SOUL, p.getLocation().add(0, 0.5, 0), 5, 0.3, 0.3, 0.3, 0.02);
+                                    }
+                                }
+                            }
+                        }
+                        ticks++;
+                    }
+                }.runTaskTimer(plugin, 0L, 1L);
+                break;
+
+            case "BERSERKER_CHARGE":
+                double bcDamage = skillConfig.getDouble("damage", 12.0);
+                double bcSpeed = skillConfig.getDouble("charge-speed", 2.0);
+                double bcPathDmg = skillConfig.getDouble("path-damage", 4.0);
+
+                // Target furthest player
+                Player chargeTarget = null;
+                double maxChargeDistSq = 0;
+                for (Player p : arena.getPlayersAsObjects()) {
+                    if (!arena.containsLocation(p.getLocation())) continue;
+                    double distSq = p.getLocation().distanceSquared(bossLoc);
+                    if (distSq > maxChargeDistSq) {
+                        maxChargeDistSq = distSq;
+                        chargeTarget = p;
+                    }
+                }
+
+                if (chargeTarget != null) {
+                    final Player finalTarget = chargeTarget;
+                    boss.setGlowing(true);
+                    bossLoc.getWorld().playSound(bossLoc, Sound.ENTITY_RAVAGER_ROAR, 2.0f, 0.8f);
+
+                    Vector chargeDir = finalTarget.getLocation().toVector().subtract(bossLoc.toVector()).setY(0).normalize().multiply(bcSpeed);
+                    boss.setVelocity(chargeDir.setY(0.15));
+
+                    new BukkitRunnable() {
+                        int chargeTicks = 0;
+                        @Override
+                        public void run() {
+                            if (boss.isDead() || !arena.isRunning() || chargeTicks >= 40) {
+                                boss.setGlowing(false);
+                                this.cancel();
+                                return;
+                            }
+
+                            Location current = boss.getLocation();
+                            current.getWorld().spawnParticle(Particle.FLAME, current, 5, 0.3, 0.1, 0.3, 0.05);
+
+                            // Damage players in path
+                            for (Player p : arena.getPlayersAsObjects()) {
+                                if (arena.containsLocation(p.getLocation()) && p.getLocation().distance(current) <= 2.5) {
+                                    if (p.equals(finalTarget)) {
+                                        double newHp = p.getHealth() - bcDamage;
+                                        if (newHp <= 0) p.damage(9999.0);
+                                        else p.setHealth(newHp);
+                                        p.setVelocity(chargeDir.clone().normalize().multiply(1.5).setY(0.8));
+                                        p.sendMessage("§c§l[IMPACT] §eYou were hit by a devastating charge!");
+                                        boss.setGlowing(false);
+                                        this.cancel();
+                                        return;
+                                    } else {
+                                        double newHp = p.getHealth() - bcPathDmg;
+                                        if (newHp <= 0) p.damage(9999.0);
+                                        else p.setHealth(newHp);
+                                        Vector push = p.getLocation().toVector().subtract(current.toVector()).normalize().multiply(1.2).setY(0.5);
+                                        p.setVelocity(push);
+                                    }
+                                }
+                            }
+                            chargeTicks++;
+                        }
+                    }.runTaskTimer(plugin, 5L, 1L);
+                }
+                break;
+
+            case "VOID_PRISON":
+                int vpDuration = skillConfig.getInt("duration", 5);
+                double vpDamage = skillConfig.getDouble("damage", 8.0);
+                List<String> vpEffects = skillConfig.getStringList("effects");
+
+                List<Player> vpTargets = new ArrayList<>(arena.getPlayersAsObjects());
+                if (!vpTargets.isEmpty()) {
+                    Player victim = vpTargets.get(ThreadLocalRandom.current().nextInt(vpTargets.size()));
+                    Location vLoc = victim.getLocation().clone();
+
+                    victim.sendMessage("§5§l[VOID PRISON] §dYou are trapped! Break free or wait " + vpDuration + "s!");
+                    victim.playSound(victim.getLocation(), Sound.ENTITY_ENDERMAN_SCREAM, 1.5f, 0.5f);
+
+                    // Build barrier cage
+                    List<Location> barrierBlocks = new ArrayList<>();
+                    int[][] offsets = {{1,0,0},{-1,0,0},{0,0,1},{0,0,-1},{0,2,0},{1,1,0},{-1,1,0},{0,1,1},{0,1,-1}};
+                    for (int[] off : offsets) {
+                        Location bLoc = vLoc.clone().add(off[0], off[1], off[2]);
+                        if (bLoc.getBlock().getType().isAir()) {
+                            bLoc.getBlock().setType(Material.BARRIER);
+                            barrierBlocks.add(bLoc);
+                        }
+                    }
+
+                    // Particle effect + damage over time
+                    new BukkitRunnable() {
+                        int ticks = 0;
+                        @Override
+                        public void run() {
+                            if (ticks >= vpDuration * 20 || !victim.isOnline() || !arena.getActivePlayers().contains(victim.getUniqueId())) {
+                                // Remove barriers
+                                for (Location bl : barrierBlocks) {
+                                    if (bl.getBlock().getType() == Material.BARRIER) {
+                                        bl.getBlock().setType(Material.AIR);
+                                    }
+                                }
+                                this.cancel();
+                                return;
+                            }
+
+                            // Particle cage effect
+                            if (ticks % 5 == 0) {
+                                for (Location bl : barrierBlocks) {
+                                    bl.getWorld().spawnParticle(Particle.WITCH, bl.clone().add(0.5, 0.5, 0.5), 2, 0.2, 0.2, 0.2, 0);
+                                }
+                            }
+
+                            // Damage every second
+                            if (ticks % 20 == 0 && ticks > 0) {
+                                double newHp = victim.getHealth() - (vpDamage / vpDuration);
+                                if (newHp <= 0) victim.damage(9999.0);
+                                else victim.setHealth(newHp);
+                                victim.getWorld().spawnParticle(Particle.SCULK_SOUL, victim.getLocation().add(0, 1, 0), 10, 0.5, 0.5, 0.5, 0.02);
+                            }
+                            ticks++;
+                        }
+                    }.runTaskTimer(plugin, 0L, 1L);
+
+                    applyEffects(victim, vpEffects);
+                }
                 break;
 
             default:

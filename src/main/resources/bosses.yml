@@ -42,6 +42,10 @@ eclipse_huntsman:
   nametagshow: true
   HP: 400.0
   Damage: 10.0
+  # [v5.6] Boss Ranged Multiplier & Arrow Penetration Configs
+  ranged-damage-multiplier: 2.5 # Multiplies base arrow damage by 2.5x
+  arrow-penetration: 0.4        # 40% of total arrow damage bypasses armor as true damage
+  spawn-random-player: true     # Ensures boss spawns safely near active arena players
   spawn-message: "&#00FFFF&l⚠ An arrow from the shadows... The Eclipse Huntsman has locked on! ⚠"
   spawn-sound: "ENTITY_SKELETON_HORSE_DEATH"
   effect-bonus: "speed:2, jump_boost:2"
@@ -49,9 +53,11 @@ eclipse_huntsman:
     - "bow:1 power:5;punch:2 %100"
     - "chainmail_helmet:1 %100"
   skill:
+    - "dash_and_ranged"
+    - "spammer_bow"
     - "super_arrow"
     - "ultimate_arrow"
-    - "gravity_pull" # Devastating combo: Pulls all players together before unleashing the Ultimate Arrow!
+    - "gravity_pull"
 
 # ==========================================
 # DEATH MAGE / ASSASSIN BOSSES
@@ -69,5 +75,10 @@ soul_reaper:
   Equip:
     - "netherite_sword:1 smite:5;knockback:2 %100"
   skill:
-    - "boss_freeze" # Freezes players and removes 35% of their maximum health
-    - "death_mark"  # Applies a cursed mark that destroys Totems of Undying
+    - "boss_freeze"    # Freezes players solid in ice, applying 35-40% true max HP damage
+    - "death_mark"     # Applies a cursed mark
+    - "soul_drain"     # Drains life force from nearby players and heals the boss
+    - "shadow_clone"   # Spawns shadow clones to confuse players
+    - "cursed_ground"  # Creates burning soul ground under players
+    - "berserker_charge" # Charges at the furthest player
+    - "void_prison"    # Traps a player in a void barrier cage

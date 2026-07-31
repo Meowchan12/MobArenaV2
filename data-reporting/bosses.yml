@@ -1,0 +1,302 @@
+# ==========================================
+# MELEE & TANK BOSSES
+# ==========================================
+abyssal_warlord:
+  type: ZOMBIE
+  Boss_displayname: '&4&lAbyssal Warlord'
+  Bossbar: true
+  nametagshow: true
+  HP: 300.0
+  Damage: 15.0
+  effect-bonus: speed:2, resistance:1
+  Equip:
+  - diamond_sword:1 sharpness:5 %100
+  skill:
+  - knockbacker
+
+abyssal_warlordwither:
+  type: ZOMBIE
+  Boss_displayname: '&d&lSUPER &c&lAbyssal Warlord'
+  Bossbar: true
+  nametagshow: true
+  HP: 700.0
+  Damage: 18.0
+  effect-bonus: speed:3, resistance:2
+  Equip:
+  - diamond_sword:1 sharpness:5;fire_aspect:2 %100
+  skill:
+  - knockbacker
+  - absolute_defense
+
+iron_behemoth:
+  loot-supply: boss_loot_forge
+  type: WARDEN
+  Boss_displayname: '&#FFAA00&lThe Iron Behemoth'
+  Bossbar: true
+  nametagshow: true
+  HP: 1000.0
+  Damage: 25
+  effect-bonus: speed:2, resistance:1
+  spawn-message: '&#FF5555&l⚠ The ground shakes... The Iron Behemoth has awakened!
+    ⚠'
+  spawn-sound: ENTITY_ENDER_DRAGON_GROWL
+  # Equip section removed because Iron Golems cannot wield weapons
+  skill:
+  - earthquake_smash
+  - absolute_defense
+  enrage-skill:
+  - lightning_strike
+
+destroyer:
+  type: PIGLIN_BRUTE
+  Boss_displayname: '&e&lDestroyer Piglin'
+  Bossbar: true
+  nametagshow: true
+  HP: 2000.0
+  Damage: 30
+  effect-bonus: strength:1, resistance:1
+  spawn-message: '&c&l⚠&d You want pass the game ? JUST FACE THE DESTROYER! ⚠'
+  spawn-sound: ENTITY_ENDER_DRAGON_GROWL
+  Equip:
+  - netherite_axe:1 sharpness:5 %100
+  - netherite_helmet:1 %100
+  - netherite_boots:1 %100
+  skill:
+  - super_arrow
+  - knockbacker
+  - minion_call
+
+
+# ==========================================
+# RANGED & HIGH-MOBILITY BOSSES
+# ==========================================
+eclipse_huntsman:
+  type: SKELETON
+  Boss_displayname: '&#00FFFF&lEclipse Huntsman'
+  Bossbar: true
+  nametagshow: true
+  HP: 400.0
+  Damage: 10.0
+  spawn-message: '&#00FFFF&l⚠ An arrow from the shadows... The Eclipse Huntsman has
+    locked on! ⚠'
+  spawn-sound: ENTITY_SKELETON_HORSE_DEATH
+  effect-bonus: speed:2, jump_boost:2
+  Equip:
+  - bow:1 power:5;punch:2 %100
+  - chainmail_helmet:1 %100
+  skill:
+  - super_arrow
+  - ultimate_arrow
+  - gravity_pull
+
+# ==========================================
+# DEATH MAGE / ASSASSIN BOSSES
+# ==========================================
+soul_reaper:
+  type: WITHER_SKELETON
+  Boss_displayname: '&#5555FF&lSoul Reaper'
+  Bossbar: true
+  nametagshow: true
+  HP: 800.0
+  Damage: 20.0
+  spawn-message: '&#5555FF&l❄ Feel the chill of death... The Soul Reaper has arrived!
+    ❄'
+  spawn-sound: ENTITY_WITHER_SPAWN
+  loot-supply: boss_loot_lich
+  Equip:
+  - netherite_sword:1 smite:5;knockback:2 %100
+  skill:
+  - boss_freeze
+  - death_mark
+
+dune_stalker:
+  type: HUSK
+  Boss_displayname: '&#e3c076&lDune Stalker'
+  Bossbar: true
+  nametagshow: true
+  HP: 600
+  Damage: 12.0
+  effect-bonus: speed:2
+  spawn-message: '&#e3c076&l⚠ The sands whisper... The Dune Stalker is hunting! ⚠'
+  spawn-sound: ENTITY_HUSK_CONVERTED_TO_ZOMBIE
+  Equip:
+  - iron_sword:1 sharpness:3;knockback:1 %100
+  - chainmail_chestplate:1 protection:2 %100
+  skill:
+  - invis_teleporter
+  - dash_and_ranged
+
+venomous_goliath:
+  type: ZOMBIE_VILLAGER
+  Boss_displayname: '&#55FF55&lVenomous Goliath'
+  Bossbar: true
+  nametagshow: true
+  HP: 2000.0
+  Damage: 14.0
+  effect-bonus: resistance:1
+  spawn-message: '&#55FF55&l⚠ Toxic fumes fill the air... The Venomous Goliath lumbers
+    forth! ⚠'
+  spawn-sound: ENTITY_ZOMBIE_VILLAGER_CURE
+  Equip:
+  - iron_shovel:1 sharpness:4 %100
+  skill:
+  - toxic_nova
+  - gravity_pull
+
+crimson_conjurer:
+  type: EVOKER
+  Boss_displayname: '&#AA0000&lCrimson Conjurer'
+  Bossbar: true
+  nametagshow: true
+  HP: 1200
+  Damage: 10.0
+  effect-bonus: speed:1
+  spawn-message: '&#AA0000&l⚠ An ancient ritual begins! The Crimson Conjurer awakens!
+    ⚠'
+  spawn-sound: ENTITY_EVOKER_PREPARE_SUMMON
+  skill:
+  - minion_call
+  - knockbacker
+
+ironclad_vanguard:
+  type: VINDICATOR
+  Boss_displayname: '&#AAAAAA&lIronclad Vanguard'
+  Bossbar: true
+  nametagshow: true
+  HP: 1500
+  Damage: 16.0
+  effect-bonus: resistance:2
+  spawn-message: '&#AAAAAA&l⚠ Blades drawn! The Ironclad Vanguard charges into battle!
+    ⚠'
+  spawn-sound: ENTITY_VINDICATOR_CELEBRATE
+  Equip:
+  - iron_axe:1 sharpness:4 %100
+  - iron_chestplate:1 protection:3 %100
+  skill:
+  - magnetic_pull
+  - earthquake
+
+frostbite_archer:
+  type: STRAY
+  Boss_displayname: '&#55FFFF&lFrostbite Archer'
+  Bossbar: true
+  nametagshow: true
+  HP: 900
+  Damage: 12.0
+  effect-bonus: speed:1
+  spawn-message: '&#55FFFF&l⚠ A freezing wind blows... The Frostbite Archer takes
+    aim! ⚠'
+  spawn-sound: ENTITY_STRAY_AMBIENT
+  Equip:
+  - bow:1 power:3;punch:1 %100
+  skill:
+  - super_arrow
+  - dash_and_ranged
+
+titan_of_the_depths:
+  type: WITHER_SKELETON
+  Boss_displayname: '&#00AAAA&lTitan of the Depths'
+  Bossbar: true
+  nametagshow: true
+  HP: 1500.0
+  Damage: 30.0
+  effect-bonus: speed:2, resistance:2
+  spawn-message: '&#00AAAA&l⚠ The earth shatters! The Titan of the Depths rises! ⚠'
+  spawn-sound: ENTITY_WARDEN_EMERGE
+  skill:
+  - earthquake_smash
+  - saitama_punch
+  - absolute_defense
+
+harbinger_of_doom:
+  type: WITHER_SKELETON
+  Boss_displayname: '&#333333&lHarbinger of Doom'
+  Bossbar: true
+  nametagshow: true
+  HP: 1200.0
+  Damage: 25.0
+  effect-bonus: speed:3
+  spawn-message: '&#333333&l⚠ Your totems cannot save you now. The Harbinger of Doom
+    is here. ⚠'
+  spawn-sound: ENTITY_WITHER_DEATH
+  Equip:
+  - netherite_sword:1 sharpness:5;fire_aspect:2 %100
+  skill:
+  - death_mark
+  - lifesteal_aura
+  - boss_freeze
+
+stormpiercer:
+  type: SKELETON
+  Boss_displayname: '&#FFFF55&lStormpiercer'
+  Bossbar: true
+  nametagshow: true
+  HP: 1000.0
+  Damage: 20.0
+  effect-bonus: speed:2, jump_boost:3
+  spawn-message: '&#FFFF55&l⚠ The sky darkens with arrows! The Stormpiercer commands
+    the storm! ⚠'
+  spawn-sound: ENTITY_LIGHTNING_BOLT_THUNDER
+  Equip:
+  - bow:1 power:6;punch:2 %100
+  skill:
+  - spammer_bow
+  - ultimate_arrow
+  - lightning_strike
+
+void_weaver:
+  type: WITCH
+  Boss_displayname: '&#AA00AA&lVoid Weaver'
+  Bossbar: true
+  nametagshow: true
+  HP: 1100.0
+  Damage: 18.0
+  effect-bonus: speed:1, regeneration:1
+  spawn-message: '&#AA00AA&l⚠ Reality twists and distorts... The Void Weaver is bending
+    space! ⚠'
+  spawn-sound: ENTITY_ILLUSIONER_CAST_SPELL
+  skill:
+  - gravity_pull
+  - toxic_nova
+  - boss_freeze
+
+infernal_warlord:
+  type: PIGLIN_BRUTE
+  Boss_displayname: '&#FF5500&lInfernal Warlord'
+  Bossbar: true
+  nametagshow: true
+  HP: 1400.0
+  Damage: 35.0
+  effect-bonus: strength:1, fire_resistance:1
+  spawn-message: '&#FF5500&l⚠ The flames of hell march with him. The Infernal Warlord
+    charges! ⚠'
+  spawn-sound: ENTITY_PIGLIN_BRUTE_ANGRY
+  Equip:
+  - netherite_axe:1 sharpness:5;knockback:2 %100
+  - netherite_chestplate:1 protection:4 %100
+  skill:
+  - saitama_punch
+  - minion_call
+  - earthquake_smash
+
+the_fallen_king:
+  type: ZOMBIE
+  Boss_displayname: '&#FF0000&l&nThe Fallen King'
+  Bossbar: true
+  nametagshow: true
+  HP: 3000
+  Damage: 40.0
+  effect-bonus: speed:3, resistance:3, strength:2
+  spawn-message: '&#FF0000&l⚠ ALL HOPE IS LOST. BOW BEFORE THE FALLEN KING! ⚠'
+  spawn-sound: UI_TOAST_CHALLENGE_COMPLETE
+  Equip:
+  - netherite_sword:1 sharpness:6;unbreaking:10 %100
+  - netherite_helmet:1 protection:5 %100
+  - netherite_chestplate:1 protection:5 %100
+  - netherite_leggings:1 protection:5 %100
+  - netherite_boots:1 protection:5 %100
+  skill:
+  - lifesteal_aura
+  - ultimate_arrow
+  - death_mark
+  - absolute_defense
