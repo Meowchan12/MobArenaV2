@@ -68,6 +68,10 @@ public class ArenaCommand implements TabExecutor {
 
         switch (subCommand) {
             case "shop" -> {
+                if (plugin.getArenaManager().getArenaByPlayer(player) != null) {
+                    player.sendMessage("§c[MobArenav2] You cannot use the shop while inside an arena!");
+                    return true;
+                }
                 if (args.length >= 2) {
                     vn.meowchan12.mobarenav2.shop.gui.ShopGUI.openCategoryShop(player, args[1], plugin);
                 } else {
@@ -246,6 +250,14 @@ public class ArenaCommand implements TabExecutor {
                         player.sendMessage("§f- §e" + a.getName() + " " + status + " §7(" + a.getActivePlayers().size() + " players)");
                     }
                 }
+            }
+
+            case "arenaedit" -> {
+                if (!player.hasPermission("mobarenav2.admin")) {
+                    player.sendMessage("§cYou don't have permission to use this command.");
+                    return true;
+                }
+                plugin.getSetupManager().toggleEditMode(player);
             }
 
             case "setup", "setp1", "setp2", "setspectator", "savearena", "save", "reload", "tp", "supply", "inv", "setupclass", "skipwave" -> {
@@ -556,6 +568,7 @@ public class ArenaCommand implements TabExecutor {
             player.sendMessage("§c /ma savearena <arena> §7- Backup arena blocks to file");
             player.sendMessage("§c /ma supply <create|edit|delete|reset> <id> §7- Manage supply drops");
             player.sendMessage("§c /ma skipwave <arena> <wave> §7- Skip/jump to a specific wave");
+            player.sendMessage("§c /ma arenaedit §7- Toggle arena edit mode");
         }
         player.sendMessage("§8§m----------------------------------");
     }
@@ -567,7 +580,7 @@ public class ArenaCommand implements TabExecutor {
         if (args.length == 1) {
             List<String> subCommands = new ArrayList<>(Arrays.asList("join", "leave", "shop", "stats", "class", "ready", "spec", "list", "top", "upgrades"));
             if (sender.hasPermission("mobarenav2.admin")) {
-                subCommands.addAll(Arrays.asList("setup", "setp1", "setp2", "setspectator", "savearena", "save", "reload", "tp", "supply", "inv", "setupclass", "skipwave"));
+                subCommands.addAll(Arrays.asList("setup", "setp1", "setp2", "setspectator", "savearena", "save", "reload", "tp", "supply", "inv", "setupclass", "skipwave", "arenaedit"));
             }
             StringUtil.copyPartialMatches(args[0], subCommands, completions);
         } else if (args.length == 2) {
@@ -583,8 +596,48 @@ public class ArenaCommand implements TabExecutor {
                 StringUtil.copyPartialMatches(args[1], supplyActions, completions);
             } else if (sub.equals("setupclass") && sender.hasPermission("mobarenav2.admin")) {
                 StringUtil.copyPartialMatches(args[1], new ArrayList<>(plugin.getClassManager().getAvailableClasses()), completions);
+            } else if (sub.equals("shop") && plugin.getShopManager() != null) {
+                List<String> shopCategories = new ArrayList<>(plugin.getShopManager().getShopCategories());
+                StringUtil.copyPartialMatches(args[1], shopCategories, completions);
             } else if (sub.equals("inv") && sender.hasPermission("mobarenav2.admin")) {
-                return null;
+                return null; // Return null to show online player names
+            }
+        } else if (args.length == 3) {
+            String sub = args[0].toLowerCase();
+            if (sub.equals("stats")) {
+                String action = args[1].toLowerCase();
+                if (action.equals("reset") || action.equals("add") || action.equals("remove")) {
+                    return null; // Return null to show online player names
+                }
+            } else if (sub.equals("supply") && sender.hasPermission("mobarenav2.admin")) {
+                String action = args[1].toLowerCase();
+                if (action.equals("edit") || action.equals("delete")) {
+                    if (plugin.getSupplyManager() != null) {
+                        List<String> supplyIds = new ArrayList<>(plugin.getSupplyManager().getAllSupplyIds());
+                        StringUtil.copyPartialMatches(args[2], supplyIds, completions);
+                    }
+                }
+            } else if (sub.equals("skipwave") && sender.hasPermission("mobarenav2.admin")) {
+                completions.add("<wave_number>");
+            }
+        } else if (args.length == 4) {
+            String sub = args[0].toLowerCase();
+            if (sub.equals("stats")) {
+                String action = args[1].toLowerCase();
+                if (action.equals("add") || action.equals("remove")) {
+                    if (plugin.getShopManager() != null) {
+                        List<String> itemIds = new ArrayList<>(plugin.getShopManager().getAllItemIds());
+                        StringUtil.copyPartialMatches(args[3], itemIds, completions);
+                    }
+                }
+            }
+        } else if (args.length == 5) {
+            String sub = args[0].toLowerCase();
+            if (sub.equals("stats")) {
+                String action = args[1].toLowerCase();
+                if (action.equals("add") || action.equals("remove")) {
+                    completions.add("<amount>");
+                }
             }
         }
 

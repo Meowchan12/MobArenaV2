@@ -321,6 +321,7 @@ public class ArenaManager {
                         profile.setScoreboard(new ArenaScoreboard(player, plugin));
                         profile.getScoreboard().update(arena);
                         arena.getPlayerProfiles().put(uuid, profile);
+                        arena.getHistoricalProfiles().put(uuid, profile);
 
                         Location lobby = arena.getLobby();
                         if (lobby != null && lobby.getWorld() != null) {
@@ -346,7 +347,7 @@ public class ArenaManager {
                         if (config != null) {
                             double baseHealth = config.getDouble("settings.base-health", 0.0);
                             if (baseHealth > 0) {
-                                AttributeInstance hpAttr = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                                AttributeInstance hpAttr = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
                                 if (hpAttr != null) {
                                     // Stack with shop bonuses: shop sets base to 20+bonus, we set it to baseHealth+bonus
                                     double shopBonus = hpAttr.getBaseValue() - 20.0; // Shop already added bonus on top of 20
@@ -397,6 +398,7 @@ public class ArenaManager {
             profile.getScoreboard().update(arena);
 
             arena.getPlayerProfiles().put(player.getUniqueId(), profile);
+            arena.getHistoricalProfiles().put(player.getUniqueId(), profile);
             arena.getSpectators().add(player.getUniqueId());
 
             Location specSpawn = arena.getSpectatorSpawn();
@@ -470,10 +472,10 @@ public class ArenaManager {
             player.removePotionEffect(effect.getType());
         }
 
-        AttributeInstance hpAttr = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        AttributeInstance hpAttr = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
         if (hpAttr != null) hpAttr.setBaseValue(20.0);
 
-        AttributeInstance dmgAttr = player.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE);
+        AttributeInstance dmgAttr = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.ATTACK_DAMAGE);
         if (dmgAttr != null) dmgAttr.setBaseValue(1.0);
 
         player.setVelocity(new Vector(0, 0, 0));
@@ -499,6 +501,9 @@ public class ArenaManager {
         if (wasSpectator) {
             arena.getSpectators().remove(player.getUniqueId());
         }
+        
+        // [v6.4 HOTFIX] Remove from active votes if leaving mid-vote
+        arena.getActiveVotes().remove(player.getUniqueId());
 
         player.getInventory().clear();
         player.setGameMode(GameMode.SURVIVAL);

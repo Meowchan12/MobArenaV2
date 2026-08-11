@@ -104,8 +104,8 @@ public class ArenaBoss {
                 }
 
                 double maxHealth = 100.0;
-                if (entity.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
-                    maxHealth = entity.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+                if (entity.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH) != null) {
+                    maxHealth = entity.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH).getValue();
                 }
                 double health = Math.max(0.0, entity.getHealth());
                 double progress = health / maxHealth;

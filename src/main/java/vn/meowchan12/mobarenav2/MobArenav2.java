@@ -47,6 +47,17 @@ public final class MobArenav2 extends JavaPlugin {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
+        
+        try {
+            Class.forName("org.bukkit.attribute.Attribute$Builder"); // Available in very new versions, or checking version string
+            String version = Bukkit.getVersion();
+            if (version.contains("1.21.2") || version.contains("1.21.3") || version.contains("1.21.4")) {
+                getLogger().info("==================================================");
+                getLogger().info("[MobArenav2] Detected Paper/Spigot 1.21.2+ API.");
+                getLogger().info("[MobArenav2] Next-Gen features and dynamic attributes activated!");
+                getLogger().info("==================================================");
+            }
+        } catch (Exception ignored) {}
 
         // 2. Tải toàn bộ cấu hình
         this.configManager = new ConfigManager(this);

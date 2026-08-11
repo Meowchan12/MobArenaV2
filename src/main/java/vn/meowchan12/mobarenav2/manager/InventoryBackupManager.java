@@ -88,35 +88,43 @@ public class InventoryBackupManager {
         File file = new File(backupFolder, player.getUniqueId().toString() + ".yml");
         if (!file.exists()) return;
 
-        FileConfiguration config = YamlConfiguration.loadConfiguration(file);
+        // [v6.4 FIX] I/O Optimization: Read backup YAML file asynchronously
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            FileConfiguration config = YamlConfiguration.loadConfiguration(file);
+            
+            // Return to Main Thread to apply the items and stats
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (!player.isOnline()) return;
+                
+                // Wash away Arena garbage before restoring
+                player.getInventory().clear();
 
-        // Wash away Arena garbage before restoring
-        player.getInventory().clear();
+                if (config.contains("inventory")) {
+                    Object obj = config.get("inventory");
+                    if (obj instanceof List) {
+                        List<ItemStack> list = (List<ItemStack>) obj;
+                        player.getInventory().setContents(list.toArray(new ItemStack[0]));
+                    }
+                }
 
-        if (config.contains("inventory")) {
-            Object obj = config.get("inventory");
-            if (obj instanceof List) {
-                List<ItemStack> list = (List<ItemStack>) obj;
-                player.getInventory().setContents(list.toArray(new ItemStack[0]));
-            }
-        }
+                if (config.contains("armor")) {
+                    Object obj = config.get("armor");
+                    if (obj instanceof List) {
+                        List<ItemStack> list = (List<ItemStack>) obj;
+                        player.getInventory().setArmorContents(list.toArray(new ItemStack[0]));
+                    }
+                }
 
-        if (config.contains("armor")) {
-            Object obj = config.get("armor");
-            if (obj instanceof List) {
-                List<ItemStack> list = (List<ItemStack>) obj;
-                player.getInventory().setArmorContents(list.toArray(new ItemStack[0]));
-            }
-        }
+                if (config.contains("xp")) player.setExp((float) config.getDouble("xp"));
+                if (config.contains("level")) player.setLevel(config.getInt("level"));
+                if (config.contains("health")) player.setHealth(Math.min(config.getDouble("health"), 20.0));
 
-        if (config.contains("xp")) player.setExp((float) config.getDouble("xp"));
-        if (config.contains("level")) player.setLevel(config.getInt("level"));
-        if (config.contains("health")) player.setHealth(Math.min(config.getDouble("health"), 20.0));
+                player.updateInventory();
 
-        player.updateInventory();
-
-        // Delete backup file to prevent item duplication
-        file.delete();
+                // Delete backup file to prevent item duplication
+                file.delete();
+            });
+        });
     }
 
     // --- ADMIN GUI VIEWER ---
@@ -128,19 +136,26 @@ public class InventoryBackupManager {
             return;
         }
 
-        FileConfiguration config = YamlConfiguration.loadConfiguration(file);
-        Inventory gui = Bukkit.createInventory(null, 54, "§8Backup: " + targetName);
+        // [v6.4 FIX] I/O Optimization: Read backup YAML file asynchronously
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            FileConfiguration config = YamlConfiguration.loadConfiguration(file);
+            
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (!admin.isOnline()) return;
+                Inventory gui = Bukkit.createInventory(null, 54, "§8Backup: " + targetName);
 
-        if (config.contains("inventory")) {
-            Object obj = config.get("inventory");
-            if (obj instanceof List) {
-                List<ItemStack> list = (List<ItemStack>) obj;
-                ItemStack[] contents = list.toArray(new ItemStack[0]);
-                for (int i = 0; i < contents.length && i < 54; i++) {
-                    if (contents[i] != null) gui.setItem(i, contents[i]);
+                if (config.contains("inventory")) {
+                    Object obj = config.get("inventory");
+                    if (obj instanceof List) {
+                        List<ItemStack> list = (List<ItemStack>) obj;
+                        ItemStack[] contents = list.toArray(new ItemStack[0]);
+                        for (int i = 0; i < contents.length && i < 54; i++) {
+                            if (contents[i] != null) gui.setItem(i, contents[i]);
+                        }
+                    }
                 }
-            }
-        }
-        admin.openInventory(gui);
+                admin.openInventory(gui);
+            });
+        });
     }
 }

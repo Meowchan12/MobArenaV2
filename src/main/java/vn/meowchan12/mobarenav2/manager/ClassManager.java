@@ -241,7 +241,7 @@ public class ClassManager {
         }
 
         if (section.getBoolean("heal-on-start", true)) {
-            AttributeInstance hpAttr = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+            AttributeInstance hpAttr = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
             if (hpAttr != null) {
                 player.setHealth(hpAttr.getValue());
             } else {
@@ -264,7 +264,7 @@ public class ClassManager {
             double targetBaseHealth = classHealth > 0 ? classHealth : arenaBaseHealth;
             
             if (targetBaseHealth > 0) {
-                AttributeInstance hpAttr2 = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                AttributeInstance hpAttr2 = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
                 if (hpAttr2 != null) {
                     // Preserve shop bonuses
                     double shopBonus = 0.0;

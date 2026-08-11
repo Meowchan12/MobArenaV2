@@ -16,6 +16,26 @@ public class SetupManager {
     public record SetupSession(Arena arena, ItemStack[] originalInventory, ItemStack[] originalArmor) {}
 
     private final Map<UUID, SetupSession> activeSessions = new HashMap<>();
+    private final java.util.Set<UUID> editSessions = new java.util.HashSet<>();
+
+    public void toggleEditMode(Player player) {
+        if (editSessions.contains(player.getUniqueId())) {
+            editSessions.remove(player.getUniqueId());
+            player.sendMessage("§c[MobArenav2] Exited Arena Edit mode.");
+        } else {
+            editSessions.add(player.getUniqueId());
+            player.sendMessage("§a[MobArenav2] Entered Arena Edit mode. You can now modify arena blocks.");
+        }
+    }
+
+    public boolean isInEditMode(Player player) {
+        return editSessions.contains(player.getUniqueId());
+    }
+
+    // [v6.2 FIX] Memory Leak Prevention: Remove edit session on player disconnect
+    public void removeEditSession(Player player) {
+        editSessions.remove(player.getUniqueId());
+    }
 
     public void enterSetupMode(Player player, Arena arena) {
         if (activeSessions.containsKey(player.getUniqueId())) {

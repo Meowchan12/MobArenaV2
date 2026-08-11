@@ -96,6 +96,15 @@ public class WaveManager {
 
                 arena.getActiveMobs().removeIf(mob -> mob == null || !mob.isValid() || mob.isDead());
 
+                // --- STAGGERED SPAWN QUEUE PROCESSING ---
+                if (!arena.getSpawnQueue().isEmpty()) {
+                    int toSpawn = Math.min(5, arena.getSpawnQueue().size());
+                    for (int i = 0; i < toSpawn; i++) {
+                        Runnable task = arena.getSpawnQueue().poll();
+                        if (task != null) task.run();
+                    }
+                }
+
                 if (isWaiting) {
                     if (halfSecondTicks >= nextWaveDelay * 2) {
                         isWaiting = false;
@@ -203,6 +212,7 @@ public class WaveManager {
                     if (shouldAdvance) {
                         // [TỐI ƯU HÓA TẠI ĐÂY] Quét và dọn dẹp mũi tên còn kẹt trên sân
                         clearProjectiles(arena);
+                        clearDroppedItems(arena);
 
                         distributeWaveRewards(arena, arena.getCurrentWave());
                         for (Player p : arena.getPlayersAsObjects()) {
@@ -299,19 +309,43 @@ public class WaveManager {
         double maxZ = Math.max(p1.getZ(), p2.getZ());
 
         for (org.bukkit.entity.Entity entity : p1.getWorld().getEntities()) {
-            if (entity instanceof org.bukkit.entity.Arrow ||
-                    entity instanceof org.bukkit.entity.SpectralArrow ||
-                    entity instanceof org.bukkit.entity.Trident) {
-
+            if (entity instanceof org.bukkit.entity.Projectile) {
                 Location loc = entity.getLocation();
                 if (loc.getX() >= minX && loc.getX() <= maxX &&
                         loc.getY() >= minY && loc.getY() <= maxY &&
                         loc.getZ() >= minZ && loc.getZ() <= maxZ) {
-
                     entity.remove();
                 }
             }
         }
+    }
+
+    private void clearDroppedItems(Arena arena) {
+        Location p1 = arena.getP1();
+        Location p2 = arena.getP2();
+        if (p1 == null || p2 == null || p1.getWorld() == null) return;
+
+        double minX = Math.min(p1.getX(), p2.getX());
+        double minY = Math.min(p1.getY(), p2.getY());
+        double minZ = Math.min(p1.getZ(), p2.getZ());
+        double maxX = Math.max(p1.getX(), p2.getX());
+        double maxY = Math.max(p1.getY(), p2.getY());
+        double maxZ = Math.max(p1.getZ(), p2.getZ());
+
+        org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
+            for (org.bukkit.entity.Entity entity : p1.getWorld().getEntities()) {
+                if (entity != null && entity.isValid()) {
+                    if (entity instanceof org.bukkit.entity.Item) {
+                        Location loc = entity.getLocation();
+                        if (loc.getX() >= minX && loc.getX() <= maxX &&
+                                loc.getY() >= minY && loc.getY() <= maxY &&
+                                loc.getZ() >= minZ && loc.getZ() <= maxZ) {
+                            entity.remove();
+                        }
+                    }
+                }
+            }
+        });
     }
 
     private void triggerLightningStrike(Arena arena, ConfigurationSection lightningSec) {
@@ -651,7 +685,7 @@ public class WaveManager {
 
                             int amountToSpawn = ArenaMath.calculateSpawnAmount(baseAmount, playerCount, globalMultiplier);
                             for (int i = 0; i < amountToSpawn; i++) {
-                                mobFactory.spawnArenaMob(arena, mobName, getSmartSpawnLocation(arena), mobSpecificConfig, targetWave);
+                                arena.getSpawnQueue().add(() -> mobFactory.spawnArenaMob(arena, mobName, getSmartSpawnLocation(arena), mobSpecificConfig, targetWave));
                             }
                         }
                     }
@@ -680,14 +714,14 @@ public class WaveManager {
                         int amountToSpawn = ArenaMath.calculateSpawnAmount(baseAmount, playerCount, 1.0);
 
                         for (int i = 0; i < amountToSpawn; i++) {
-                            mobFactory.spawnArenaMob(arena, mobName, getSmartSpawnLocation(arena), null, targetWave);
+                            arena.getSpawnQueue().add(() -> mobFactory.spawnArenaMob(arena, mobName, getSmartSpawnLocation(arena), null, targetWave));
                         }
                     }
                 }
             } else {
                 int amountToSpawn = ArenaMath.calculateSpawnAmount(5, playerCount, 1.0);
                 for (int i = 0; i < amountToSpawn; i++) {
-                    mobFactory.spawnArenaMob(arena, "ZOMBIE", getSmartSpawnLocation(arena), null, null);
+                    arena.getSpawnQueue().add(() -> mobFactory.spawnArenaMob(arena, "ZOMBIE", getSmartSpawnLocation(arena), null, null));
                 }
             }
         } catch (Exception ex) {

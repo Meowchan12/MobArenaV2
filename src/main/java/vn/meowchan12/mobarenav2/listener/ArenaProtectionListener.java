@@ -25,6 +25,8 @@ import vn.meowchan12.mobarenav2.arena.Arena;
 
 import java.util.Arrays;
 import java.util.List;
+import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.block.BlockExplodeEvent;
 
 public class ArenaProtectionListener implements Listener {
 
@@ -52,8 +54,25 @@ public class ArenaProtectionListener implements Listener {
         }
     }
 
-    @EventHandler
-    public void onPlayerInteract(PlayerInteractEvent event) {
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onBlockExplodeArena(org.bukkit.event.block.BlockExplodeEvent event) {
+        if (isInsideAnyArena(event.getBlock().getLocation())) {
+            event.setCancelled(true);
+            return;
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEntityExplodeArena(org.bukkit.event.entity.EntityExplodeEvent event) {
+        event.blockList().removeIf(block -> isInsideAnyArena(block.getLocation()));
+    }
+
+    private boolean isInsideAnyArena(org.bukkit.Location loc) {
+        return plugin.getArenaManager().getAllArenas().stream().anyMatch(a -> a.containsLocation(loc));
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
 
         if (plugin.getInventoryBackupManager() != null && plugin.getInventoryBackupManager().isPendingJoin(player.getUniqueId())) {
@@ -74,10 +93,23 @@ public class ArenaProtectionListener implements Listener {
                     player.sendMessage("§c[MobArenav2] You cannot use utility blocks like Crafting Tables or Furnaces during combat!");
                 }
             }
+        } else {
+            if (event.getAction() == Action.RIGHT_CLICK_BLOCK && event.getClickedBlock() != null) {
+                for (Arena a : plugin.getArenaManager().getAllArenas()) {
+                    if (a.containsLocation(event.getClickedBlock().getLocation())) {
+                        if (plugin.getSetupManager().isInEditMode(player) && !a.isRunning()) {
+                            return; // Allow admin to interact if arena is not running
+                        }
+                        event.setCancelled(true);
+                        player.sendMessage("§c[MobArenav2] You cannot interact with blocks inside an arena! Use /ma arenaedit to modify when the arena is not running.");
+                        return;
+                    }
+                }
+            }
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onItemDrop(PlayerDropItemEvent event) {
         Player player = event.getPlayer();
 
@@ -97,7 +129,7 @@ public class ArenaProtectionListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
         if (plugin.getSetupManager().isInSetupMode(player)) return;
@@ -121,10 +153,21 @@ public class ArenaProtectionListener implements Listener {
 
             boolean allowBreak = arena.getConfig().getBoolean("settings.rules.block-break", false);
             if (!allowBreak) event.setCancelled(true);
+        } else {
+            for (Arena a : plugin.getArenaManager().getAllArenas()) {
+                if (a.containsLocation(event.getBlock().getLocation())) {
+                    if (plugin.getSetupManager().isInEditMode(player) && !a.isRunning()) {
+                        return; // Allow admin to edit if arena is not running
+                    }
+                    event.setCancelled(true);
+                    player.sendMessage("§c[MobArenav2] You cannot break blocks inside an arena! Use /ma arenaedit to modify when it is not running.");
+                    return;
+                }
+            }
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
         if (plugin.getSetupManager().isInSetupMode(event.getPlayer())) return;
 
@@ -132,10 +175,21 @@ public class ArenaProtectionListener implements Listener {
         if (arena != null && arena.isRunning()) {
             boolean allowPlace = arena.getConfig().getBoolean("settings.rules.block-place", false);
             if (!allowPlace) event.setCancelled(true);
+        } else {
+            for (Arena a : plugin.getArenaManager().getAllArenas()) {
+                if (a.containsLocation(event.getBlock().getLocation())) {
+                    if (plugin.getSetupManager().isInEditMode(event.getPlayer()) && !a.isRunning()) {
+                        return; // Allow admin to edit if arena is not running
+                    }
+                    event.setCancelled(true);
+                    event.getPlayer().sendMessage("§c[MobArenav2] You cannot place blocks inside an arena! Use /ma arenaedit to modify when it is not running.");
+                    return;
+                }
+            }
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onCommandPreprocess(PlayerCommandPreprocessEvent event) {
         Player player = event.getPlayer();
         if (plugin.getSetupManager().isInSetupMode(player)) return;
@@ -146,6 +200,19 @@ public class ArenaProtectionListener implements Listener {
             if (allowAllCmds) return;
 
             String cmd = event.getMessage().toLowerCase();
+            
+            // Strip plugin aliases (e.g., /minecraft:tp -> /tp, /bukkit:kill -> /kill)
+            if (cmd.startsWith("/")) {
+                String[] parts = cmd.substring(1).split(" ");
+                if (parts.length > 0 && parts[0].contains(":")) {
+                    String[] aliasParts = parts[0].split(":");
+                    if (aliasParts.length > 1) {
+                        parts[0] = aliasParts[1];
+                        cmd = "/" + String.join(" ", parts);
+                    }
+                }
+            }
+            
             List<String> whitelist = arena.getConfig().getStringList("settings.rules.command-whitelist");
             boolean isAllowed = false;
 
@@ -167,7 +234,7 @@ public class ArenaProtectionListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
         Arena arena = plugin.getArenaManager().getArenaByPlayer(player);
@@ -191,10 +258,18 @@ public class ArenaProtectionListener implements Listener {
         }
 
         if (cause == PlayerTeleportEvent.TeleportCause.ENDER_PEARL) {
-            if (arena.isRunning() && !arena.containsLocation(to)) {
+            boolean allowEnderpearl = arena.getConfig().getBoolean("settings.rules.allow-enderpearl", true);
+            if (!allowEnderpearl) {
                 event.setCancelled(true);
-                player.sendMessage("§c[MobArenav2] You cannot use an Ender Pearl to escape the combat boundaries!");
+                player.sendMessage("§c[MobArenav2] Enderpearls are disabled in this arena!");
             }
+            return;
+        }
+
+        if (cause == PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT) {
+            event.setCancelled(true);
+            player.sendMessage("§c[MobArenav2] Chorus fruit teleportation is disabled in the arena!");
+            return;
         }
     }
 
@@ -269,5 +344,34 @@ public class ArenaProtectionListener implements Listener {
                 );
             }
         }
+    }
+
+    @EventHandler
+    public void onEntityExplode(EntityExplodeEvent event) {
+        protectSupplyChests(event.blockList());
+    }
+
+    @EventHandler
+    public void onBlockExplode(BlockExplodeEvent event) {
+        protectSupplyChests(event.blockList());
+    }
+
+    private void protectSupplyChests(List<org.bukkit.block.Block> blockList) {
+        blockList.removeIf(block -> {
+            if (block.getType() == Material.CHEST) {
+                for (Arena arena : plugin.getArenaManager().getAllArenas()) {
+                    if (arena.isRunning()) {
+                        for (Location supplyLoc : arena.getActiveSupplies()) {
+                            if ((supplyLoc.getBlockX() == block.getX() || supplyLoc.getBlockX() + 1 == block.getX()) &&
+                                supplyLoc.getBlockY() == block.getY() &&
+                                supplyLoc.getBlockZ() == block.getZ()) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        });
     }
 }

@@ -208,15 +208,15 @@ public class BossSkillExecutor {
                     // Spawn temporary ice blocks
                     Location pLoc = p.getLocation();
                     List<Location> iceBlocks = new ArrayList<>();
-                    Location ice1 = pLoc.clone().add(1, 0, 0);
-                    Location ice2 = pLoc.clone().add(-1, 0, 0);
+                    Location ice1 = pLoc.clone();
+                    Location ice2 = pLoc.clone().add(0, 1, 0);
                     
                     if (ice1.getBlock().getType().isAir()) {
-                        ice1.getBlock().setType(Material.BLUE_ICE);
+                        ice1.getBlock().setType(Material.ICE);
                         iceBlocks.add(ice1);
                     }
                     if (ice2.getBlock().getType().isAir()) {
-                        ice2.getBlock().setType(Material.BLUE_ICE);
+                        ice2.getBlock().setType(Material.ICE);
                         iceBlocks.add(ice2);
                     }
 
@@ -241,9 +241,9 @@ public class BossSkillExecutor {
                     Bukkit.getScheduler().runTaskLater(plugin, () -> {
                         // Remove ice blocks
                         for (Location iceLoc : iceBlocks) {
-                            if (iceLoc.getBlock().getType() == Material.BLUE_ICE) {
+                            if (iceLoc.getBlock().getType() == Material.ICE) {
                                 iceLoc.getBlock().setType(Material.AIR);
-                                iceLoc.getWorld().spawnParticle(Particle.BLOCK, iceLoc.clone().add(0.5, 0.5, 0.5), 20, 0.3, 0.3, 0.3, 0, Material.BLUE_ICE.createBlockData());
+                                iceLoc.getWorld().spawnParticle(Particle.BLOCK, iceLoc.clone().add(0.5, 0.5, 0.5), 20, 0.3, 0.3, 0.3, 0, Material.ICE.createBlockData());
                             }
                         }
 
@@ -252,7 +252,7 @@ public class BossSkillExecutor {
                             p.getWorld().spawnParticle(Particle.SNOWFLAKE, p.getLocation(), 80, 1.5, 2.0, 1.5, 0.1);
 
                             // True damage: 35-40% max HP
-                            AttributeInstance maxHpAttr = p.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                            AttributeInstance maxHpAttr = p.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
                             double maxHp = (maxHpAttr != null) ? maxHpAttr.getValue() : 20.0;
                             double lossPercent = ThreadLocalRandom.current().nextDouble(hpLossMin, hpLossMax);
                             double loss = maxHp * (lossPercent / 100.0);
@@ -765,7 +765,7 @@ public class BossSkillExecutor {
                     if (!arena.containsLocation(p.getLocation())) continue;
                     if (p.getLocation().distance(bossLoc) > sdRadius) continue;
 
-                    AttributeInstance maxHpAttr = p.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                    AttributeInstance maxHpAttr = p.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
                     double maxHp = (maxHpAttr != null) ? maxHpAttr.getValue() : 20.0;
                     double drain = maxHp * (sdDrainPercent / 100.0);
                     double newHp = p.getHealth() - drain;
@@ -780,7 +780,7 @@ public class BossSkillExecutor {
 
                 // Heal boss
                 double healAmount = totalDrained * sdHealMultiplier;
-                AttributeInstance bossMaxHpAttr = boss.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                AttributeInstance bossMaxHpAttr = boss.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
                 double bossMaxHp = (bossMaxHpAttr != null) ? bossMaxHpAttr.getValue() : 100.0;
                 boss.setHealth(Math.min(boss.getHealth() + healAmount, bossMaxHp));
                 boss.getWorld().spawnParticle(Particle.HEART, boss.getLocation().add(0, 2, 0), 10, 0.5, 0.5, 0.5, 0);
@@ -807,12 +807,12 @@ public class BossSkillExecutor {
                         clone.setCustomNameVisible(true);
                         clone.setMetadata("MA_MOB", new org.bukkit.metadata.FixedMetadataValue(plugin, arena.getName()));
 
-                        AttributeInstance cloneHp = clone.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                        AttributeInstance cloneHp = clone.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
                         if (cloneHp != null) {
                             cloneHp.setBaseValue(20.0);
                             clone.setHealth(20.0);
                         }
-                        AttributeInstance cloneAtk = clone.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE);
+                        AttributeInstance cloneAtk = clone.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.ATTACK_DAMAGE);
                         if (cloneAtk != null) cloneAtk.setBaseValue(cloneDamage);
 
                         clone.getWorld().spawnParticle(Particle.LARGE_SMOKE, cloneLoc, 20, 0.5, 1, 0.5, 0.05);

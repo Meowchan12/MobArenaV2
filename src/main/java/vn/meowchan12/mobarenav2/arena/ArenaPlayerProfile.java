@@ -25,6 +25,7 @@ public class ArenaPlayerProfile {
     private String selectedClass = null;
     private ArenaScoreboard scoreboard;
     private int kills = 0;
+    private int coins = 0;
 
     private final Map<String, Integer> activeUpgrades = new HashMap<>();
 
@@ -56,6 +57,9 @@ public class ArenaPlayerProfile {
         activeUpgrades.put(upgradeId, getUpgradeLevel(upgradeId) + 1);
     }
 
+    public void removeCoins(int amount) {
+        this.coins = Math.max(0, this.coins - amount);
+    }
     public void clearUpgrades() {
         activeUpgrades.clear();
     }

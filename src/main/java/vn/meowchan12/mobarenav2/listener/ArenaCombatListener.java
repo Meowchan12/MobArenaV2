@@ -79,8 +79,8 @@ public class ArenaCombatListener implements Listener {
 
             // 2. ARMOR COUNTER BONUS: Evaluates target's armor points (Netherite/Diamond Prot IV)
             double armorPoints = 0.0;
-            if (player.getAttribute(org.bukkit.attribute.Attribute.GENERIC_ARMOR) != null) {
-                armorPoints = player.getAttribute(org.bukkit.attribute.Attribute.GENERIC_ARMOR).getValue();
+            if (player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.ARMOR) != null) {
+                armorPoints = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.ARMOR).getValue();
             }
             double armorCounterBonus = 0.0;
             if (armorPoints > 10.0) {
@@ -176,8 +176,8 @@ public class ArenaCombatListener implements Listener {
                     // [v5.2 UPGRADE]: SECOND_WIND (EMERGENCY SHIELD)
                     // Grants Resistance + Regen when HP drops below 25%
                     // =====================================================================
-                    double maxHp = player.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH) != null ?
-                                   player.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH).getValue() : 20.0;
+                    double maxHp = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH) != null ?
+                                   player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH).getValue() : 20.0;
                     if (player.getHealth() <= maxHp * 0.25) {
                         int swLvl = profile.getUpgradeLevel("second_wind");
                         if (swLvl > 0) {

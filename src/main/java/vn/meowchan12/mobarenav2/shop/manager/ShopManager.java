@@ -139,6 +139,14 @@ public class ShopManager {
         plugin.getLogger().info("[MobArenav2] Loaded " + categories.size() + " shop categories and " + shopItems.size() + " shop items.");
     }
 
+    public java.util.Set<String> getShopCategories() {
+        return categories.keySet();
+    }
+
+    public java.util.Set<String> getAllItemIds() {
+        return shopItems.keySet();
+    }
+
     public PlayerShopData getPlayerData(UUID uuid) {
         if (!playerDataMap.containsKey(uuid)) {
             playerDataMap.put(uuid, loadPlayerDataFromDisk(uuid));
@@ -183,6 +191,12 @@ public class ShopManager {
         } catch (Exception e) {
             plugin.getLogger().warning("[MobArenav2] Failed to save shop user data for: " + uuid);
         }
+    }
+
+    // [v6.2 FIX] Memory Leak Prevention: Save and unload player data from RAM on disconnect
+    public void unloadPlayerData(UUID uuid) {
+        savePlayerDataToDisk(uuid);
+        playerDataMap.remove(uuid);
     }
 
     // =====================================================================
@@ -343,30 +357,30 @@ public class ShopManager {
         }
 
         // Apply HP
-        double hpBonus = totalBonuses.getOrDefault(Attribute.GENERIC_MAX_HEALTH, 0.0);
-        AttributeInstance hpInst = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        double hpBonus = totalBonuses.getOrDefault(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH, 0.0);
+        AttributeInstance hpInst = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
         if (hpInst != null) {
             hpInst.setBaseValue(20.0 + hpBonus);
             player.setHealth(Math.min(player.getHealth() + hpBonus, hpInst.getValue()));
         }
 
         // Apply Armor
-        double armorBonus = totalBonuses.getOrDefault(Attribute.GENERIC_ARMOR, 0.0);
-        AttributeInstance armorInst = player.getAttribute(Attribute.GENERIC_ARMOR);
+        double armorBonus = totalBonuses.getOrDefault(vn.meowchan12.mobarenav2.utils.AttributeUtils.ARMOR, 0.0);
+        AttributeInstance armorInst = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.ARMOR);
         if (armorInst != null) {
             armorInst.setBaseValue(0.0 + armorBonus);
         }
 
         // Apply Attack Damage
-        double dmgBonus = totalBonuses.getOrDefault(Attribute.GENERIC_ATTACK_DAMAGE, 0.0);
-        AttributeInstance dmgInst = player.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE);
+        double dmgBonus = totalBonuses.getOrDefault(vn.meowchan12.mobarenav2.utils.AttributeUtils.ATTACK_DAMAGE, 0.0);
+        AttributeInstance dmgInst = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.ATTACK_DAMAGE);
         if (dmgInst != null) {
             dmgInst.setBaseValue(1.0 + dmgBonus);
         }
 
         // Apply Armor Toughness
-        double toughnessBonus = totalBonuses.getOrDefault(Attribute.GENERIC_ARMOR_TOUGHNESS, 0.0);
-        AttributeInstance toughnessInst = player.getAttribute(Attribute.GENERIC_ARMOR_TOUGHNESS);
+        double toughnessBonus = totalBonuses.getOrDefault(vn.meowchan12.mobarenav2.utils.AttributeUtils.ARMOR_TOUGHNESS, 0.0);
+        AttributeInstance toughnessInst = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.ARMOR_TOUGHNESS);
         if (toughnessInst != null && toughnessBonus > 0) {
             toughnessInst.setBaseValue(toughnessBonus);
         }
@@ -374,8 +388,15 @@ public class ShopManager {
 
     private Attribute parseAttribute(String name) {
         if (name == null) return null;
+        String upper = name.toUpperCase();
+        if (upper.equals("GENERIC_MAX_HEALTH") || upper.equals("MAX_HEALTH")) return vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH;
+        if (upper.equals("GENERIC_ATTACK_DAMAGE") || upper.equals("ATTACK_DAMAGE")) return vn.meowchan12.mobarenav2.utils.AttributeUtils.ATTACK_DAMAGE;
+        if (upper.equals("GENERIC_MOVEMENT_SPEED") || upper.equals("MOVEMENT_SPEED")) return vn.meowchan12.mobarenav2.utils.AttributeUtils.MOVEMENT_SPEED;
+        if (upper.equals("GENERIC_ARMOR") || upper.equals("ARMOR")) return vn.meowchan12.mobarenav2.utils.AttributeUtils.ARMOR;
+        if (upper.equals("GENERIC_ARMOR_TOUGHNESS") || upper.equals("ARMOR_TOUGHNESS")) return vn.meowchan12.mobarenav2.utils.AttributeUtils.ARMOR_TOUGHNESS;
+        
         try {
-            return Attribute.valueOf(name.toUpperCase());
+            return Attribute.valueOf(upper);
         } catch (Exception e) {
             return null;
         }

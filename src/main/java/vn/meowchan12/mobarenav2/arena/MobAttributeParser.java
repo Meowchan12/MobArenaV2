@@ -36,13 +36,13 @@ public class MobAttributeParser {
         String bowSpeedBonusStr = getBonusString("bow-speed", mobConfig, waveConfig);
         String effectStr = getBonusString("effect", mobConfig, waveConfig);
 
-        applyGenericAttribute(mob, Attribute.GENERIC_MAX_HEALTH, hpBonusStr);
+        applyGenericAttribute(mob, vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH, hpBonusStr);
         if (hpBonusStr != null) {
-            AttributeInstance maxHpAttr = mob.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+            AttributeInstance maxHpAttr = mob.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
             if (maxHpAttr != null) mob.setHealth(maxHpAttr.getValue());
         }
 
-        applyGenericAttribute(mob, Attribute.GENERIC_ATTACK_DAMAGE, damageBonusStr);
+        applyGenericAttribute(mob, vn.meowchan12.mobarenav2.utils.AttributeUtils.ATTACK_DAMAGE, damageBonusStr);
 
         // [FIX BUG #7]: Gắn nhãn NBT để ArenaCombatListener có thể đọc và tính Xuyên Giáp + Nhân Sát Thương Vũ Khí
         if (damageBonusStr != null && !damageBonusStr.isEmpty()) {
@@ -50,7 +50,7 @@ public class MobAttributeParser {
             mob.getPersistentDataContainer().set(dmgKey, PersistentDataType.STRING, damageBonusStr);
         }
 
-        applyGenericAttribute(mob, Attribute.GENERIC_MOVEMENT_SPEED, speedBonusStr);
+        applyGenericAttribute(mob, vn.meowchan12.mobarenav2.utils.AttributeUtils.MOVEMENT_SPEED, speedBonusStr);
 
         applyExplosionBonus(mob, explosionBonusStr);
         applyBowSpeedBonus(mob, bowSpeedBonusStr);
@@ -71,9 +71,9 @@ public class MobAttributeParser {
         // [FIX BUG #2]: MULTI-ALIAS KEY — Đọc linh hoạt HP/hp/max-hp
         // =====================================================================
         String hpKey = bossConfig.contains("HP") ? "HP" : (bossConfig.contains("hp") ? "hp" : (bossConfig.contains("max-hp") ? "max-hp" : null));
-        if (hpKey != null && mob.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
+        if (hpKey != null && mob.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH) != null) {
             double hp = bossConfig.getDouble(hpKey);
-            mob.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(hp);
+            mob.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH).setBaseValue(hp);
             mob.setHealth(hp);
         }
 
@@ -81,8 +81,8 @@ public class MobAttributeParser {
         // [FIX BUG #2]: MULTI-ALIAS KEY — Đọc linh hoạt Damage/damage
         // =====================================================================
         String dmgKey = bossConfig.contains("Damage") ? "Damage" : (bossConfig.contains("damage") ? "damage" : null);
-        if (dmgKey != null && mob.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE) != null) {
-            mob.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE).setBaseValue(bossConfig.getDouble(dmgKey));
+        if (dmgKey != null && mob.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.ATTACK_DAMAGE) != null) {
+            mob.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.ATTACK_DAMAGE).setBaseValue(bossConfig.getDouble(dmgKey));
         }
 
         // =====================================================================

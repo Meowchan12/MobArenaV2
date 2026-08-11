@@ -100,10 +100,17 @@ public class SupplyManager {
         if (list != null) {
             List<ItemStack> items = new ArrayList<>();
             for (Object obj : list) {
-                if (obj instanceof ItemStack is) items.add(is);
+                if (obj instanceof ItemStack) items.add((ItemStack) obj);
             }
             return items;
         }
         return new ArrayList<>();
+    }
+
+    public java.util.Set<String> getAllSupplyIds() {
+        if (config.getConfigurationSection("supplies") != null) {
+            return config.getConfigurationSection("supplies").getKeys(false);
+        }
+        return new java.util.HashSet<>();
     }
 }

@@ -1,18 +1,22 @@
 package vn.meowchan12.mobarenav2.manager;
 
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import vn.meowchan12.mobarenav2.MobArenav2;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class UserDataManager {
 
     private final MobArenav2 plugin;
     private final File userFolder;
+    private final Map<UUID, YamlConfiguration> cache = new HashMap<>();
 
     public UserDataManager(MobArenav2 plugin) {
         this.plugin = plugin;
@@ -26,38 +30,53 @@ public class UserDataManager {
         return new File(userFolder, uuid.toString() + ".yml");
     }
 
-    private YamlConfiguration getConfig(File file) {
-        return YamlConfiguration.loadConfiguration(file);
+    public void loadData(UUID uuid) {
+        File file = getPlayerFile(uuid);
+        if (file.exists()) {
+            cache.put(uuid, YamlConfiguration.loadConfiguration(file));
+        } else {
+            cache.put(uuid, new YamlConfiguration());
+        }
     }
 
-    private void saveConfig(YamlConfiguration config, File file) {
-        try {
-            config.save(file);
-        } catch (IOException e) {
-            plugin.getLogger().severe("[MobArenav2] Could not save user data to " + file.getName());
+    public void unloadData(UUID uuid) {
+        cache.remove(uuid);
+    }
+
+    private YamlConfiguration getConfig(UUID uuid) {
+        if (!cache.containsKey(uuid)) {
+            loadData(uuid);
         }
+        return cache.get(uuid);
+    }
+
+    private void saveConfigAsync(UUID uuid, YamlConfiguration config) {
+        File file = getPlayerFile(uuid);
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                config.save(file);
+            } catch (IOException e) {
+                plugin.getLogger().severe("[MobArenav2] Could not save user data to " + file.getName());
+            }
+        });
     }
 
     // ==========================================
     // [MỚI] ARENA LOCK SYSTEM (CAMPAIGN PROGRESS)
     // ==========================================
     public void unlockArena(UUID uuid, String arenaName) {
-        File file = getPlayerFile(uuid);
-        YamlConfiguration config = getConfig(file);
+        YamlConfiguration config = getConfig(uuid);
         List<String> unlocked = config.getStringList("unlocked_arenas");
 
         if (!unlocked.contains(arenaName.toLowerCase())) {
             unlocked.add(arenaName.toLowerCase());
             config.set("unlocked_arenas", unlocked);
-            saveConfig(config, file);
+            saveConfigAsync(uuid, config);
         }
     }
 
     public boolean hasUnlockedArena(UUID uuid, String arenaName) {
-        File file = getPlayerFile(uuid);
-        if (!file.exists()) return false;
-
-        YamlConfiguration config = getConfig(file);
+        YamlConfiguration config = getConfig(uuid);
         List<String> unlocked = config.getStringList("unlocked_arenas");
         return unlocked.contains(arenaName.toLowerCase());
     }
@@ -66,8 +85,7 @@ public class UserDataManager {
     // LIFETIME STATS SYSTEM (BẢNG XẾP HẠNG)
     // ==========================================
     public void addStats(UUID uuid, int kills, boolean isWin, int maxWave) {
-        File file = getPlayerFile(uuid);
-        YamlConfiguration config = getConfig(file);
+        YamlConfiguration config = getConfig(uuid);
 
         int currentKills = config.getInt("stats.lifetime_kills", 0);
         int gamesPlayed = config.getInt("stats.games_played", 0);
@@ -79,13 +97,11 @@ public class UserDataManager {
         if (isWin) config.set("stats.games_won", gamesWon + 1);
         if (maxWave > highestWave) config.set("stats.highest_wave", maxWave);
 
-        saveConfig(config, file);
+        saveConfigAsync(uuid, config);
     }
 
     public int getStat(UUID uuid, String statType) {
-        File file = getPlayerFile(uuid);
-        if (!file.exists()) return 0;
-        YamlConfiguration config = getConfig(file);
+        YamlConfiguration config = getConfig(uuid);
         return config.getInt("stats." + statType, 0);
     }
 

@@ -166,9 +166,9 @@ public class MobFactory {
                                     bossConfig.getDouble("max-hp", 100.0)));
                     double scaledHp = ArenaMath.calculateBossHealth(baseHp, 1.0, playerCount);
 
-                    if (bossEntity.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
-                        bossEntity.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(scaledHp);
-                        bossEntity.setHealth(Math.min(scaledHp, bossEntity.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()));
+                    if (bossEntity.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH) != null) {
+                        bossEntity.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH).setBaseValue(scaledHp);
+                        bossEntity.setHealth(Math.min(scaledHp, bossEntity.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH).getValue()));
                     }
 
                     // =====================================================================
@@ -178,9 +178,9 @@ public class MobFactory {
                     final double finalHp = scaledHp;
                     Bukkit.getScheduler().runTaskLater(plugin, () -> {
                         if (finalBossMob.isValid() && !finalBossMob.isDead()) {
-                            if (finalBossMob.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
-                                finalBossMob.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(finalHp);
-                                finalBossMob.setHealth(Math.min(finalHp, finalBossMob.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()));
+                            if (finalBossMob.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH) != null) {
+                                finalBossMob.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH).setBaseValue(finalHp);
+                                finalBossMob.setHealth(Math.min(finalHp, finalBossMob.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH).getValue()));
                             }
                         }
                     }, 1L);

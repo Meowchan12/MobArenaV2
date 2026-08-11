@@ -36,10 +36,14 @@ public class Arena {
     private final Map<UUID, Boolean> activeVotes = new HashMap<>();
 
     private final Map<UUID, ArenaPlayerProfile> playerProfiles = new HashMap<>();
+    private final Map<UUID, ArenaPlayerProfile> historicalProfiles = new HashMap<>();
     private final Set<UUID> spectators = new HashSet<>();
     private final List<LivingEntity> activeMobs = new ArrayList<>();
 
     private final List<Location> activeSupplies = new ArrayList<>();
+    
+    // Staggered Spawning Queue
+    private final java.util.Queue<Runnable> spawnQueue = new java.util.LinkedList<>();
 
     public Arena(String name) {
         this.name = name;
@@ -78,6 +82,8 @@ public class Arena {
     public void setVoteTicks(int voteTicks) { this.voteTicks = voteTicks; }
 
     public Map<UUID, ArenaPlayerProfile> getPlayerProfiles() { return playerProfiles; }
+    public Map<UUID, ArenaPlayerProfile> getHistoricalProfiles() { return historicalProfiles; }
+    public java.util.Queue<Runnable> getSpawnQueue() { return spawnQueue; }
     public Set<UUID> getSpectators() { return spectators; }
     public List<LivingEntity> getActiveMobs() { return activeMobs; }
     public List<Location> getActiveSupplies() { return activeSupplies; }
@@ -273,7 +279,7 @@ public class Arena {
             config.set("last-match.is-endless", this.isEndlessMode);
             config.set("last-match.players", null);
 
-            List<ArenaPlayerProfile> mvps = new ArrayList<>(playerProfiles.values());
+            List<ArenaPlayerProfile> mvps = new ArrayList<>(historicalProfiles.values());
             mvps.sort((a, b) -> Integer.compare(b.getKills(), a.getKills()));
 
             String[] topNames = {"---", "---", "---"};
@@ -377,7 +383,11 @@ public class Arena {
         }
 
         playerProfiles.clear();
+        historicalProfiles.clear();
+        spawnQueue.clear(); // [v6.2 FIX] Memory Leak #4: Release all pending spawn closures
         spectators.clear();
+        endlessWaveQueue.clear(); // [v6.4 HOTFIX] Prevent endless queue memory leak
+        activeVotes.clear(); // [v6.4 HOTFIX] Clear pending votes to prevent UUID leak
 
         new ArenaRestorer(plugin).restoreArena(this);
     }

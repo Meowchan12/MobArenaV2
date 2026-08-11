@@ -198,7 +198,7 @@ public class ArenaMobCombatListener implements Listener {
 
                             if (System.currentTimeMillis() <= expiry) {
                                 double healPercent = ThreadLocalRandom.current().nextDouble(minPercent, maxPercent);
-                                AttributeInstance maxHpAttr = damager.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                                AttributeInstance maxHpAttr = damager.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
                                 double maxHp = (maxHpAttr != null) ? maxHpAttr.getValue() : 100.0;
                                 double healAmount = maxHp * (healPercent / 100.0);
 
@@ -253,21 +253,28 @@ public class ArenaMobCombatListener implements Listener {
         // =========================================================
         // 2. PLAYER DEALS DAMAGE TO BOSS OR MOBS
         // =========================================================
-        if (event.getDamager() instanceof Player attacker) {
-            Arena arena = plugin.getArenaManager().getArenaByPlayer(attacker);
-            if (arena != null && arena.isRunning() && !arena.getSpectators().contains(attacker.getUniqueId())) {
+        if (event.getEntity() instanceof LivingEntity victimTarget && victimTarget.hasMetadata("MA_MOB")) {
+            Player attacker = null;
+            if (event.getDamager() instanceof Player p) attacker = p;
+            else if (event.getDamager() instanceof Projectile proj && proj.getShooter() instanceof Player p) attacker = p;
 
+            if (attacker != null) {
+                Arena arena = plugin.getArenaManager().getArenaByPlayer(attacker);
+                if (arena == null || !arena.isRunning() || arena.getSpectators().contains(attacker.getUniqueId())) {
+                    event.setCancelled(true);
+                    attacker.sendMessage("§c[MobArenav2] You cannot attack arena mobs from the outside!");
+                    return;
+                }
+                
                 // --- NEW: BOSS INVULNERABLE CHECK (DASH PHASE) ---
-                if (event.getEntity() instanceof LivingEntity target) {
-                    if (target.getPersistentDataContainer().has(invulnKey, PersistentDataType.LONG)) {
-                        long expiry = target.getPersistentDataContainer().get(invulnKey, PersistentDataType.LONG);
-                        if (System.currentTimeMillis() <= expiry) {
-                            event.setCancelled(true);
-                            attacker.playSound(attacker.getLocation(), Sound.ITEM_SHIELD_BLOCK, 1.0f, 1.0f);
-                            return;
-                        } else {
-                            target.getPersistentDataContainer().remove(invulnKey);
-                        }
+                if (victimTarget.getPersistentDataContainer().has(invulnKey, PersistentDataType.LONG)) {
+                    long expiry = victimTarget.getPersistentDataContainer().get(invulnKey, PersistentDataType.LONG);
+                    if (System.currentTimeMillis() <= expiry) {
+                        event.setCancelled(true);
+                        attacker.playSound(attacker.getLocation(), Sound.ITEM_SHIELD_BLOCK, 1.0f, 1.0f);
+                        return;
+                    } else {
+                        victimTarget.getPersistentDataContainer().remove(invulnKey);
                     }
                 }
 
@@ -315,7 +322,7 @@ public class ArenaMobCombatListener implements Listener {
                 double shopLifesteal = (plugin.getShopManager() != null) ? plugin.getShopManager().getCustomStatBonus(attacker.getUniqueId(), "CUSTOM_LIFESTEAL_BOOST") : 0.0;
                 double lifestealChance = profile.getUpgradeValue("LIFESTEAL", plugin) + shopLifesteal;
                 if (lifestealChance > 0 && ThreadLocalRandom.current().nextDouble(100.0) <= lifestealChance) {
-                    double maxHp = (attacker.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) ? attacker.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() : 20.0;
+                    double maxHp = (attacker.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH) != null) ? attacker.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH).getValue() : 20.0;
                     double healAmount = Math.max(2.0, event.getDamage() * 0.25);
                     double currentHp = attacker.getHealth();
 
@@ -334,7 +341,7 @@ public class ArenaMobCombatListener implements Listener {
                     attacker.playSound(attacker.getLocation(), Sound.ENTITY_WITCH_DRINK, 0.5f, 1.8f);
                 }
 
-                if (event.getEntity() instanceof LivingEntity victimTarget) {
+                if (true) {
                     // =====================================================================
                     // [v5.2 UPGRADE]: ARMOR_PIERCING (ARMOR SHREDDER)
                     // Bypasses mob armor and deals True Damage
@@ -383,8 +390,8 @@ public class ArenaMobCombatListener implements Listener {
 
                         double soulDropChance = profile.getUpgradeValue("SOUL_ORB", plugin);
                         if (soulDropChance > 0 && ThreadLocalRandom.current().nextDouble(100.0) <= soulDropChance) {
-                            double maxHp = attacker.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null ?
-                                           attacker.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() : 20.0;
+                            double maxHp = attacker.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH) != null ?
+                                           attacker.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH).getValue() : 20.0;
                             attacker.setHealth(Math.min(attacker.getHealth() + 3.0, maxHp));
                             attacker.getWorld().spawnParticle(Particle.SOUL, attacker.getLocation().add(0, 1, 0), 10, 0.3, 0.5, 0.3, 0.05);
                             attacker.playSound(attacker.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.8f, 1.5f);

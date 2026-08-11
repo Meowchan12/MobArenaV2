@@ -17,6 +17,18 @@ permissions:
   mobarenav2.bypass.arenalock:
     description: Bypasses arena unlock requirements
     default: op
+  mobarenav2.player.join:
+    description: Allows joining arenas
+    default: true
+  mobarenav2.player.leave:
+    description: Allows leaving arenas
+    default: true
+  mobarenav2.player.spec:
+    description: Allows spectating arenas
+    default: true
+  mobarenav2.player.list:
+    description: Allows listing arenas
+    default: true
 
 commands:
   ma:

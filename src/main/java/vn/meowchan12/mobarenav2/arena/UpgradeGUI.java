@@ -259,7 +259,7 @@ public class UpgradeGUI implements Listener {
             if (upgradeId != null) {
                 if (upgradeId.equals("MAXED_OUT_HEAL")) {
                     double maxHp = 20.0;
-                    AttributeInstance hpAttr = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                    AttributeInstance hpAttr = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
                     if (hpAttr != null) maxHp = hpAttr.getValue();
                     player.setHealth(Math.min(player.getHealth() + 4.0, maxHp));
                     player.sendMessage("§a[MobArenav2] §eYou are fully upgraded! Healed 2 hearts.");
@@ -320,13 +320,13 @@ public class UpgradeGUI implements Listener {
 
         switch (targetData.type) {
             case "HEAL":
-                AttributeInstance hpAttrHeal = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                AttributeInstance hpAttrHeal = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
                 double maxHpHeal = (hpAttrHeal != null) ? hpAttrHeal.getValue() : 20.0;
                 player.setHealth(Math.min(player.getHealth() + valueToAdd, maxHpHeal));
                 break;
 
             case "MAX_HEALTH":
-                AttributeInstance hpAttr = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                AttributeInstance hpAttr = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
                 if (hpAttr != null) {
                     hpAttr.setBaseValue(hpAttr.getBaseValue() + valueToAdd);
                     player.setHealth(Math.min(player.getHealth() + valueToAdd, hpAttr.getValue()));
@@ -334,7 +334,7 @@ public class UpgradeGUI implements Listener {
                 break;
 
             case "DAMAGE_MULTIPLIER":
-                AttributeInstance dmgAttr = player.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE);
+                AttributeInstance dmgAttr = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.ATTACK_DAMAGE);
                 if (dmgAttr != null) {
                     dmgAttr.setBaseValue(dmgAttr.getBaseValue() + valueToAdd);
                 }
