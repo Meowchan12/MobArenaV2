@@ -23,35 +23,11 @@ settings:
     Archer: 35.0
     Mage: 30.0
 
-  # [v5.7 FEATURE] PER-ARENA ROGUELIKE UPGRADE SYSTEM OVERRIDE
-  # Set override-global to true if you want this specific arena to use its own upgrade rules.
-  upgrade-system:
-    override-global: false
-    enabled: true
-    mode: "INTERVAL" # Options: "INTERVAL", "SPECIFIC_WAVES", "STAGE_BASED"
-    trigger-every-waves: 5
-    specific-waves:
-      - 5
-      - 10
-      - 15
-      - 20
-    stage-triggers:
-      stage_1:
-        min-wave: 1
-        max-wave: 10
-        interval: 5
-      stage_2:
-        min-wave: 11
-        max-wave: 30
-        interval: 3
-    default-max-slots: 3
-    class-slots:
-      Tank: 4
-      Warrior: 3
-      Archer: 3
-      Mage: 2
+  # [v8.4.0 CENTRALIZED]: All Roguelike Upgrade System rules (intervals, slots, draft rates)
+  # are now centrally managed in settings.yml under 'upgrade-system.arenas.<arena_name>'.
+  # When a new arena is detected, its config section is auto-generated from 'upgrade-system.default'.
 
-  # [MỚI] ARENA LOCK: Require players to clear another arena first.
+  # [FEATURE] ARENA LOCK: Require players to clear another arena first.
   # Leave blank ("") if this arena is unlocked by default.
   required-arena: ""
 
@@ -79,6 +55,10 @@ settings:
     command-whitelist:
       - "/ma leave"
       - "/ma class"
+    mob-siege-break: true
+    siege-unbreakable-blocks:
+      - "BEDROCK"
+      - "BARRIER"
 
   wave-conditions:
     # If true, the next wave will NOT start until all mobs are killed.
@@ -99,6 +79,7 @@ settings:
   # %top1_class%  : MVP Class Name
   announcer:
     announce-when-arena-ends: true
+    compact-mode: true
     messages:
       victory:
         - "&e=========================================="
@@ -155,7 +136,7 @@ coords:
   spectator: 0.0,0.0,0.0,0.0,0.0,world
   spawnpoints:
     s1: 0.0,0.0,0.0,0.0,0.0,world
-  # [MỚI] Lưu trữ tọa độ xuất hiện hòm thính
+  # Supply drop crate spawn locations
   supplypoints:
     s1: 0.0,0.0,0.0,0.0,0.0,world
 
@@ -197,10 +178,11 @@ rewards:
 #      - If priorities are equal, the system selects one randomly.
 #
 #   wave_types:
-#      - mob    : Standard mob spawning.
-#      - swarm  : Applies 'mob-multiplier' to spawn massive hordes.
-#      - boss   : Summons Custom Bosses from bosses.yml.
-#      - supply : Spawns a Supply Chest (Uses 'supply-id' and 'duration').
+#      - mob            : Standard mob spawning.
+#      - swarm          : Fast-paced horde wave with 'mob-multiplier' and Speed boost.
+#      - elite_mutation : Monsters spawn with random elite affixes (Shielded, Speedster, Explosive, Berserk, Corrupt).
+#      - boss           : Summons Custom Bosses from bosses.yml.
+#      - supply         : Spawns a Supply Chest (Uses 'supply-id' and 'duration').
 #
 #   Modifiers (Optional):
 #      - maxhp-bonus    : '+10' (Adds 10 HP) or 'x2.0' (Doubles base HP).
@@ -236,6 +218,15 @@ waves:
         amount: 2
         explosion-damage: "x2.0"
 
+  'elite_mutation_event':
+    waves: 6, 14
+    priority: 2
+    wave_types: elite_mutation
+    mobs:
+      zombie: 4
+      skeleton: 3
+      piglin_brute: 1
+
   # ----------------------------------------
   # SPECIAL EVENTS (Priority 1 - Absolute)
   # ----------------------------------------
@@ -252,10 +243,22 @@ waves:
     wave_types: boss
     mobs:
       abyssal_warlord: 1
+      healer_witch: 1      # [v8.3.0] Tactical Healer Witch (Green Glow, heals 5% max HP)
+      buffer_witch: 1      # [v8.3.0] Tactical War Witch (Red Glow, stacks Strength every 5s)
 
   # ----------------------------------------
   # TIER 2: MID GAME (Waves 11-20)
   # ----------------------------------------
+  'witch_coven_ambush':
+    waves: 15
+    priority: 2
+    wave_types: mob
+    mobs:
+      zombie: 8
+      skeleton: 4
+      healer_witch: 1
+      buffer_witch: 1
+
   'veteran_mobs':
     waves: 11-20
     priority: 3

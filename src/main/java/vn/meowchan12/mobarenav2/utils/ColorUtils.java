@@ -6,8 +6,8 @@ import java.util.regex.Pattern;
 
 public class ColorUtils {
 
-    // Matches &#RRGGBB, #RRGGBB, and <#RRGGBB>
-    private static final Pattern HEX_PATTERN = Pattern.compile("(?:&|<)?#([a-fA-F0-9]{6})>?");
+    // Matches &#RRGGBB, §#RRGGBB, #RRGGBB, and <#RRGGBB>
+    private static final Pattern HEX_PATTERN = Pattern.compile("(?:[§&]|<)?#([a-fA-F0-9]{6})>?");
 
     /**
      * Translates color codes including:
@@ -29,6 +29,24 @@ public class ColorUtils {
 
         // Process standard color codes
         return ChatColor.translateAlternateColorCodes('&', sb.toString());
+    }
+
+    /**
+     * Converts a string with legacy or hex colors into an Adventure Component with explicit italic control.
+     * In Minecraft, item meta display names and lore default to italic unless TextDecoration.ITALIC is set to false.
+     */
+    public static net.kyori.adventure.text.Component toAdventure(String text, boolean italic) {
+        if (text == null) return net.kyori.adventure.text.Component.empty();
+        net.kyori.adventure.text.Component comp = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(colorize(text));
+        return net.kyori.adventure.text.Component.empty().decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, italic).append(comp);
+    }
+
+    /**
+     * Converts a string with legacy or hex colors into an Adventure Component.
+     * Defaults to non-italic (italic: false) to prevent Minecraft's default italics in item names and lore.
+     */
+    public static net.kyori.adventure.text.Component toAdventure(String text) {
+        return toAdventure(text, false);
     }
 
     /**

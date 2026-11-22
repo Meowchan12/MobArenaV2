@@ -113,20 +113,10 @@ public class GUIListener implements Listener {
         if (!(event.getPlayer() instanceof Player player)) return;
 
         String title = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-
-        if (title.contains("Choose Upgrade") || title.contains("Chọn Nâng Cấp")) {
-            // Nếu người chơi tắt GUI nhưng chưa nằm trong danh sách đã chọn thành công
+        if (vn.meowchan12.mobarenav2.arena.UpgradeGUI.isUpgradeSelectionTitle(title, plugin)) {
             if (!completedUpgradeSelection.contains(player.getUniqueId())) {
-                player.sendMessage("§c[MobArenav2] You must select an upgrade before closing the menu!");
-
-                // Mở lại menu sau 1 tick để tránh lỗi Thread giật lag của Minecraft
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    if (player.isOnline()) {
-                        UpgradeGUI.open(player, plugin);
-                    }
-                }, 1L);
+                player.sendActionBar(vn.meowchan12.mobarenav2.utils.ColorUtils.toAdventure("&e&l[⚡ Upgrade paused: Use &a&l/ma upgrade &e&lanytime to claim!]"));
             } else {
-                // Xóa khỏi danh sách sau khi đã xử lý xong để chuẩn bị cho đợt Wave tiếp theo
                 completedUpgradeSelection.remove(player.getUniqueId());
             }
         }
@@ -145,13 +135,23 @@ public class GUIListener implements Listener {
             return;
         }
 
+        if (title.contains("Match Details:") || title.contains("Chi Tiết Trận Đấu:")) {
+            event.setCancelled(true);
+            if (event.getCurrentItem() != null && (event.getCurrentItem().getType() == Material.BARRIER || event.getCurrentItem().getType() == Material.ARROW)) {
+                player.closeInventory();
+                player.playSound(player.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+            }
+            return;
+        }
+
         if (title.contains("Select your Class")) {
             event.setCancelled(true);
             ItemStack clickedItem = event.getCurrentItem();
             if (clickedItem == null || !clickedItem.hasItemMeta()) return;
 
-            if (clickedItem.getType() == Material.BARRIER) {
-                player.sendMessage("§c[MobArenav2] This class is already full!");
+            boolean isAdminBypass = player.hasPermission("mobarenav2.bypass.class") || player.hasPermission("mobarenav2.admin");
+            if (clickedItem.getType() == Material.BARRIER && !isAdminBypass) {
+                player.sendMessage("§c[MobArenav2] This class is restricted or full!");
                 return;
             }
 
@@ -166,7 +166,7 @@ public class GUIListener implements Listener {
             }
         }
 
-        else if (title.contains("Vote: Endless Mode?")) {
+        else if (title.contains("Endless Mode") || title.contains("Vote")) {
             event.setCancelled(true);
             Arena arena = plugin.getArenaManager().getArenaByPlayer(player);
             if (arena == null || !arena.isVoting()) {
@@ -174,11 +174,15 @@ public class GUIListener implements Listener {
                 return;
             }
             ItemStack clickedItem = event.getCurrentItem();
-            if (clickedItem == null) return;
-            if (clickedItem.getType() == Material.LIME_WOOL) {
+            if (clickedItem == null || !clickedItem.hasItemMeta()) return;
+
+            NamespacedKey voteKey = new NamespacedKey(plugin, vn.meowchan12.mobarenav2.arena.VoteGUI.VOTE_PDC_KEY);
+            String choice = clickedItem.getItemMeta().getPersistentDataContainer().get(voteKey, PersistentDataType.STRING);
+
+            if ("yes".equalsIgnoreCase(choice) || clickedItem.getType() == Material.EMERALD_BLOCK || clickedItem.getType() == Material.LIME_WOOL || event.getRawSlot() == 11) {
                 plugin.getWaveManager().castVote(player, arena, true);
                 player.closeInventory();
-            } else if (clickedItem.getType() == Material.RED_WOOL) {
+            } else if ("no".equalsIgnoreCase(choice) || clickedItem.getType() == Material.REDSTONE_BLOCK || clickedItem.getType() == Material.RED_WOOL || event.getRawSlot() == 15) {
                 plugin.getWaveManager().castVote(player, arena, false);
                 player.closeInventory();
             }

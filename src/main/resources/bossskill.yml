@@ -7,7 +7,7 @@ earthquake:
   message: "&c&l[EARTHQUAKE] &4%boss% &eslams the ground with &c%skill%&e!"
   radius: 6.0
   damage: 12.0
-  armor-penetration: 0.90 # 90% armor penetration (True Damage)
+  armor-penetration: 0.35 # 35% armor penetration (Layered Piercing Damage)
 
 gravity_pull:
   display-name: "Gravity Void"
@@ -63,7 +63,7 @@ knockbacker:
   knockback-power: 2.0
   knockback-height: 1.2
   effects:
-    - "confusion:100:1"
+    - "nausea:100:1"
   cooldown: 20
 
 death_mark:
@@ -75,19 +75,17 @@ death_mark:
   cooldown: 30
 
 boss_freeze:
-  display-name: "FREEZE"
+  display-name: "Absolute Zero"
   type: FREEZE
-  message: "&b&l[FROST] &3%boss% &efreezes the arena with &b%skill%&e!"
+  message: "&b&l[ABSOLUTE ZERO] &3%boss% &cunleashes a catastrophic glacial blizzard!"
   freeze-time: 4
-  min-range: 32.0
-  max-range: 64.0
+  min-range: 0.0
+  max-range: 35.0
   hp-loss-percent-min: 35.0
   hp-loss-percent-max: 40.0
   after-effects:
-    - "slowness:200:2"
-    - "poison:160:1"
+    - "slowness:100:3"
     - "weakness:160:1"
-    - "wither:120:1"
   cooldown: 25
 
 # ==========================================
@@ -111,7 +109,7 @@ earthquake_smash:
   jump-velocity: 1.5
   knockup-power: 1.2
   damage: 15.0
-  armor-penetration: 0.90 # 90% armor penetration (True Damage)
+  armor-penetration: 0.40 # 40% armor penetration (Layered Piercing Damage)
   cooldown: 25
 
 toxic_nova:
@@ -170,7 +168,7 @@ spammer_bow:
   duration: 6
   damage: 6.0
   explosion-radius: 3.0
-  true-damage-percent: 0.80
+  true-damage-percent: 0.30
   attack-interval: 1.5
   guaranteed-hit: true
   knockback-force: 1.2
@@ -186,7 +184,7 @@ saitama_punch:
   message: "&4&l[FATAL STRIKE] &c%boss% &ereadies a devastating &4%skill%&e!"
   duration: 5
   damage: 25.0
-  armor-penetration: 0.90 # 90% armor penetration (True Damage)
+  armor-penetration: 0.45 # 45% armor penetration (Layered Piercing Damage)
   cooldown: 25
 
 lifesteal_aura:
@@ -195,8 +193,23 @@ lifesteal_aura:
   message: "&4&l[VAMPIRIC] &c%boss% &eactivates &4%skill%&e to drain your health!"
   duration: 10
   heal-percent:
-    min: 1.0
-    max: 1.5
+    min: 30.0 # [v7.3 Rework] Heals 30-50% of damage dealt
+    max: 50.0
+  cooldown: 30
+
+meteor_shower:
+  display-name: "Meteor Shower"
+  type: METEOR_SHOWER
+  message: "&4&l[METEOR] &c%boss% &ecalls down devastating meteors from the sky!"
+  targets: 3
+  explosion-power: 2.5
+  cooldown: 35
+
+enrage:
+  display-name: "Berserk Enrage"
+  type: ENRAGE
+  message: "&4&l[ENRAGE] &c%boss% &egoes berserk! Attacks and speed vastly increased!"
+  effects: "speed:2, strength:2, resistance:1"
   cooldown: 30
 
 # ==========================================
@@ -207,8 +220,8 @@ soul_drain:
   type: SOUL_DRAIN
   message: "&5&l[DRAIN] &d%boss% &edrains the souls of surrounding players!"
   radius: 10.0
-  drain-percent: 10.0
-  heal-multiplier: 1.5
+  drain-percent: 5.0 # [v6.6 Nerf] from 10.0
+  heal-multiplier: 0.5 # [v6.6 Nerf] from 1.5
   cooldown: 30
 
 shadow_clone:
@@ -252,3 +265,85 @@ void_prison:
     - "blindness:100:1"
     - "slowness:100:2"
   cooldown: 45
+
+shadow_warp:
+  display-name: "Shadow Warp"
+  type: SHADOW_WARP
+  message: "&5&l[WARP] &d%boss% &eshadow-warps behind targets!"
+  radius: 35.0
+  damage: 6.0
+  slowness-duration: 60
+  cooldown: 20
+
+vertigo_pulse:
+  display-name: "Vertigo Pulse"
+  type: VERTIGO_PULSE
+  message: "&c&l[VERTIGO] &4%boss% &eunleashes a disorienting sonic pulse!"
+  radius: 18.0
+  damage: 4.0
+  nausea-duration: 80
+  cooldown: 25
+
+chrono_stasis:
+  display-name: "Chrono Stasis"
+  type: CHRONO_STASIS
+  message: "&e&l[TIME] &6%boss% &ewarps time into a stasis dome!"
+  radius: 6.0
+  damage-per-second: 3.0
+  cooldown: 35
+
+abyssal_tether:
+  display-name: "Abyssal Tether"
+  type: ABYSSAL_TETHER
+  message: "&4&l[TETHER] &c%boss% &ebinds souls with dark abyssal chains!"
+  max-distance: 10.0
+  damage: 5.0
+  duration: 120
+  cooldown: 30
+
+# ==========================================
+# [v8.3.0] Tactical Boss Skills
+# ==========================================
+shield_break_burst:
+  display-name: "Apocalypse Barrier"
+  type: SHIELD_BREAK_BURST
+  message: "&c&l[DPS CHECK] &4%boss% &cchannels an apocalyptic barrier!"
+  shield-hp: 800.0
+  duration: 5
+  fail-damage-percent: 0.60
+  cooldown: 40
+
+telegraphed_slam:
+  display-name: "Earthshatter Slam"
+  type: TELEGRAPHED_SLAM
+  message: "&c&l[RED ZONE] &4%boss% &creadies an Earthshatter Slam! Escape the circle!"
+  radius: 6.0
+  damage-percent: 0.70
+  cooldown: 25
+
+chain_of_fate:
+  display-name: "Chain of Fate"
+  type: CHAIN_OF_FATE
+  message: "&4&l[CHAINS] &c%boss% &ebinds warriors with the Chain of Fate! Sprint apart!"
+  break-distance: 16.0
+  duration: 5
+  damage-percent: 0.40
+  cooldown: 35
+
+mortal_ground:
+  display-name: "Mortal Ground"
+  type: MORTAL_GROUND
+  message: "&4&l[CORRUPTION] &c%boss% &ccorrupted the earth beneath your feet!"
+  radius: 3.5
+  duration: 10
+  damage-per-second: 4.0
+  cooldown: 30
+
+blood_frenzy:
+  display-name: "Blood Frenzy"
+  type: BLOOD_FRENZY
+  message: "&4&l[FRENZY] &c%boss% &egains blood frenzy below 30% HP! Burst it down!"
+  cooldown: 60
+  speed-amplifier: 1
+  strength-amplifier: 1
+  lifesteal-percent: 1.0 # Heals 1.0% of Boss Max HP on every basic attack landed

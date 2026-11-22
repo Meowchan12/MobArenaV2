@@ -16,6 +16,7 @@ import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.metadata.FixedMetadataValue;
 import vn.meowchan12.mobarenav2.MobArenav2;
+import vn.meowchan12.mobarenav2.boss.BossSizeHandler;
 import vn.meowchan12.mobarenav2.utils.ArenaMath;
 
 import java.util.List;
@@ -57,6 +58,22 @@ public class MobFactory {
         boolean isCustomBoss = false;
 
         // =====================================================================
+        // [v8.3.0]: SUPPORT MOBS SYSTEM (Healer Witch & War Buffer Witch)
+        // =====================================================================
+        if (plugin.getSupportMobService() != null && plugin.getSupportMobService().isSupportMobKey(mobName)) {
+            try {
+                Entity entity = loc.getWorld().spawnEntity(loc, EntityType.WITCH);
+                if (entity instanceof org.bukkit.entity.Witch witch) {
+                    spawnedMob = witch;
+                    int curWave = (arena != null) ? arena.getCurrentWave() : 1;
+                    plugin.getSupportMobService().setupSupportWitch(witch, arena, mobName, curWave);
+                }
+            } catch (Exception ex) {
+                plugin.getLogger().warning("[MobArenav2] Failed to spawn Support Witch '" + mobName + "': " + ex.getMessage());
+            }
+        }
+
+        // =====================================================================
         // [FIX BUG #1]: CASE-INSENSITIVE BOSS KEY LOOKUP
         // Duyệt qua tất cả key trong bosses.yml và so sánh không phân biệt
         // hoa thường, tránh lỗi "Iron_Behemoth" vs "iron_behemoth"
@@ -65,7 +82,7 @@ public class MobFactory {
         ConfigurationSection bossConfig = null;
         String matchedBossKey = mobName;
 
-        if (bossesSec != null) {
+        if (spawnedMob == null && bossesSec != null) {
             for (String key : bossesSec.getKeys(false)) {
                 if (key.equalsIgnoreCase(mobName)) {
                     bossConfig = bossesSec.getConfigurationSection(key);
@@ -75,7 +92,7 @@ public class MobFactory {
             }
         }
 
-        if (bossConfig != null) {
+        if (spawnedMob == null && bossConfig != null) {
             isCustomBoss = true;
 
             // =====================================================================
@@ -87,7 +104,7 @@ public class MobFactory {
                                       bossConfig.getBoolean("spawn-near-player",
                                       bossConfig.getBoolean("spawn_near_player", false))));
 
-            if (spawnNearPlayer && !arena.getPlayersAsObjects().isEmpty()) {
+            if (spawnNearPlayer && arena != null && !arena.getPlayersAsObjects().isEmpty()) {
                 List<Player> activePlayers = arena.getPlayersAsObjects();
                 Player randomTarget = (activePlayers.size() == 1) ? activePlayers.get(0) :
                         activePlayers.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(activePlayers.size()));
@@ -143,10 +160,15 @@ public class MobFactory {
                     spawnedMob = bossEntity;
 
                     // =====================================================================
-                    // STEP 1: Tag this entity as a Boss with persistent data
+                    // STEP 1: Tag this entity as a Boss with persistent data & metadata
                     // =====================================================================
                     org.bukkit.NamespacedKey bKey = new org.bukkit.NamespacedKey(plugin, "arena_boss_id");
                     bossEntity.getPersistentDataContainer().set(bKey, org.bukkit.persistence.PersistentDataType.STRING, matchedBossKey);
+
+                    // [v8.2.2 FIX]: Tag ma_boss_id and MA_BOSS metadata so all listeners & stat trackers reliably detect bosses!
+                    org.bukkit.NamespacedKey maBKey = new org.bukkit.NamespacedKey(plugin, "ma_boss_id");
+                    bossEntity.getPersistentDataContainer().set(maBKey, org.bukkit.persistence.PersistentDataType.STRING, matchedBossKey);
+                    bossEntity.setMetadata("MA_BOSS", new org.bukkit.metadata.FixedMetadataValue(plugin, true));
 
                     // =====================================================================
                     // STEP 2: Apply boss-specific attributes (HP, Damage, Equip, Effects)
@@ -157,10 +179,17 @@ public class MobFactory {
                         plugin.getLogger().warning("[MobArenav2] Failed to apply attributes to Boss '" + matchedBossKey + "': " + attrEx.getMessage());
                     }
 
+                    // [v7.0] Apply boss size scaling
+                    try {
+                        BossSizeHandler.applySize(bossEntity, bossConfig, plugin);
+                    } catch (Exception sizeEx) {
+                        plugin.getLogger().warning("[MobArenav2] Failed to apply boss size for '" + matchedBossKey + "': " + sizeEx.getMessage());
+                    }
+
                     // =====================================================================
                     // STEP 3: Scale HP based on player count
                     // =====================================================================
-                    int playerCount = arena.getActivePlayers().size();
+                    int playerCount = (arena != null) ? Math.max(1, arena.getActivePlayers().size()) : 1;
                     double baseHp = bossConfig.getDouble("HP",
                                     bossConfig.getDouble("hp",
                                     bossConfig.getDouble("max-hp", 100.0)));
@@ -208,7 +237,7 @@ public class MobFactory {
                     // =====================================================================
                     // STEP 6: Create ArenaBoss (handles bossbar, skills, enrage, etc.)
                     // =====================================================================
-                    new ArenaBoss(plugin, arena, bossEntity, dName, bBar, nTag, skills, enrageSkills);
+                    new ArenaBoss(plugin, arena, bossEntity, dName, bBar, nTag, skills, enrageSkills, matchedBossKey);
 
                     plugin.getLogger().info("[MobArenav2] Boss '" + matchedBossKey + "' spawned successfully! HP=" + scaledHp + " DisplayName=" + dName + " BossBar=" + bBar);
                 }
@@ -259,19 +288,36 @@ public class MobFactory {
             spawnedMob.setRemoveWhenFarAway(false);
             spawnedMob.setPersistent(true);
 
-            // Gán Target ban đầu cho người chơi gần nhất trong Arena
-            if (!arena.getPlayersAsObjects().isEmpty()) {
+            // Gán Target ban đầu cho người chơi gần nhất trong Arena (hoặc quanh điểm spawn nếu standalone)
+            if (arena != null && !arena.getPlayersAsObjects().isEmpty()) {
                 Player nearest = arena.getPlayersAsObjects().get(0);
                 spawnedMob.setTarget(nearest);
+            } else if (arena == null && loc.getWorld() != null) {
+                java.util.List<Player> nearby = new java.util.ArrayList<>(loc.getWorld().getNearbyPlayers(loc, 30.0));
+                if (!nearby.isEmpty()) {
+                    spawnedMob.setTarget(nearby.get(0));
+                }
             }
 
             // =====================================================================
             // [FIX CRITICAL BUG]: GÁN METADATA "MA_MOB" CHO TẤT CẢ MOB ARENA
             // Metadata này là CHÌA KHÓA để kích hoạt toàn bộ hệ thống
             // =====================================================================
-            spawnedMob.setMetadata("MA_MOB", new FixedMetadataValue(plugin, arena.getName()));
+            if (arena != null) {
+                spawnedMob.setMetadata("MA_MOB", new FixedMetadataValue(plugin, arena.getName()));
+            } else {
+                spawnedMob.setMetadata("MA_MOB", new FixedMetadataValue(plugin, "STANDALONE"));
+                spawnedMob.setMetadata("MA_TEST_BOSS", new FixedMetadataValue(plugin, true));
+            }
 
-            arena.getActiveMobs().add(spawnedMob);
+            // [v7.5.2 MODULAR MOB HANDLER]: Apply dedicated mob biological traits, AI, and immunity
+            if (arena != null && plugin.getMobRegistry() != null) {
+                plugin.getMobRegistry().handleSpawn(spawnedMob, arena);
+            }
+
+            if (arena != null) {
+                arena.getActiveMobs().add(spawnedMob);
+            }
             if (!isCustomBoss && mobConfig != null && waveConfig != null) {
                 attributeParser.applyAttributes(spawnedMob, mobConfig, waveConfig);
             }

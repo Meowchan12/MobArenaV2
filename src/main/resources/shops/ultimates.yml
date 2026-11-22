@@ -8,7 +8,7 @@ category:
   id: "ultimates"
   display-name: "&#00FFFF&lSPECIAL ULTIMATE ABILITIES"
   material: BEACON
-  slot: 22
+  slot: 23
   lore:
     - "&7&m---------------------"
     - "&fUnlock active ultimate abilities."
@@ -24,6 +24,7 @@ items:
     lore:
       - "&7&m---------------------"
       - "&fDash forward 8 blocks and stun mobs in your trajectory."
+      - "&eActivation: &bShift + Right-Click weapon"
       - "&fCooldown: &e25 Seconds"
       - "&7&m---------------------"
     price-type: PLAYERPOINTS
@@ -43,6 +44,7 @@ items:
     lore:
       - "&7&m---------------------"
       - "&fPlant a Holy Banner restoring 30% Max HP to all teammates."
+      - "&eActivation: &bShift + Right-Click weapon"
       - "&fCooldown: &e45 Seconds"
       - "&7&m---------------------"
     price-type: PLAYERPOINTS
@@ -63,6 +65,7 @@ items:
       - "&7&m---------------------"
       - "&fFreeze yourself in stasis for 3s (100% Invulnerable)."
       - "&fBurst an icy shockwave when stasis ends."
+      - "&eActivation: &bShift + Right-Click weapon"
       - "&fCooldown: &e60 Seconds"
       - "&7&m---------------------"
     price-type: PLAYERPOINTS

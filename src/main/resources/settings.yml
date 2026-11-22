@@ -57,95 +57,198 @@ gui:
   # Upgrade Selection Menu (Used if the Upgrade system is enabled)
   upgrade:
     title: "Choose Upgrade (Wave %wave%)"
+    swarm-title: "&#FF55FF&l✦ SWARM VICTORY UPGRADE ✦ &8(%left% Left)"
+    boss-title: "&#FFAA00&l✦ BOSS VICTORY UPGRADE ✦ &8(%left% Left)"
+    starter-title: "&#00FFFF&l✦ STARTER UPGRADE ✦ &8(%left% Left)"
 
 # ==========================================
-# ROGUELIKE UPGRADE SYSTEM CONFIGURATION
+# ROGUELIKE UPGRADE SYSTEM CONFIGURATION (v8.4.0 CENTRALIZED)
 # ==========================================
-# Controls mid-game buff choices that appear after wave clears.
-# Can be configured globally here, or overridden per-arena in arena ymls.
+# Single Source of Truth for all arenas.
+# 'default' is the master template. Whenever the plugin detects any other arena
+# (e.g., stage1, stage2, stage3), it automatically copies 'default' into
+# 'upgrade-system.arenas.<arena_name>' so you can customize each arena directly here!
 # ==========================================
 upgrade-system:
+  default:
+    enabled: true
+
+    # Trigger Mode Options (for standard normal waves):
+    #   "INTERVAL"       : Triggers every X waves (configured by trigger-every-waves).
+    #   "SPECIFIC_WAVES" : Triggers only on listed wave numbers (configured by specific-waves).
+    #   "STAGE_BASED"    : Triggers per wave range / stage intervals (configured by stage-triggers).
+    mode: "INTERVAL"
+
+    # [INTERVAL MODE] Trigger normal upgrade selection menu every X waves cleared
+    trigger-every-waves: 5
+
+    # [SPECIFIC_WAVES MODE] List of wave numbers that offer normal upgrades
+    specific-waves:
+      - 5
+      - 10
+      - 15
+      - 20
+      - 25
+      - 30
+
+    # [STAGE_BASED MODE] Configure different upgrade frequencies per stage / wave range
+    stage-triggers:
+      stage_1:
+        min-wave: 1
+        max-wave: 10
+        interval: 5
+      stage_2:
+        min-wave: 11
+        max-wave: 30
+        interval: 3
+
+    # Default maximum upgrade slots per player (limits active different upgrade types)
+    default-max-slots: 3
+
+    # Class-specific upgrade slot limits (overrides default-max-slots per class)
+    class-slots:
+      Knight: 4
+      Archer: 3
+      Alchemist: 4
+      Juggernaut: 2
+
+    # When a Boss or Swarm wave also lands on a normal interval wave (e.g., Wave 15):
+    #   false (recommended): Grants ONLY the Boss/Swarm reward choices (prevents 3+1=4 inflation).
+    #   true               : Grants BOTH the Boss/Swarm choices AND the normal interval choice(s).
+    stack-with-interval: false
+
+    # Starter Upgrade (Granted right after lobby countdown when entering the arena)
+    starter-upgrade:
+      enabled: true
+      upgrade-count: 1
+      normal-chance: 90.0
+      super-chance: 10.0
+      guaranteed-super-slots: 0
+      max-super-slots: 1
+
+    # Configurable Upgrade Draft Counts & Normal/Super Roll Rates per Wave Type
+    draft-rates:
+      normal:
+        grant-count: 1
+        normal-chance: 90.0
+        super-chance: 10.0
+        guaranteed-super-slots: 0
+        max-super-slots: 1
+        pity-threshold: 4 # Guaranteed 1 Super after 4 dry normal drafts (0 = disabled)
+      swarm:
+        grant-count: 2
+        normal-chance: 75.0
+        super-chance: 25.0
+        guaranteed-super-slots: 0
+        max-super-slots: 2
+        pity-threshold: 0
+      boss:
+        grant-count: 3
+        normal-chance: 35.0
+        super-chance: 65.0
+        guaranteed-super-slots: 1
+        max-super-slots: 3
+        pity-threshold: 0
+
+# ==========================================
+# BROADCAST & ANNOUNCEMENTS
+# (All in-game messages are centralized in messages.yml)
+# ==========================================
+broadcast-join-to-all-server: false
+
+# ==========================================
+# ROGUELIKE UPGRADE REROLL CONFIGURATION
+# ==========================================
+upgrade-reroll:
   enabled: true
-
-  # Trigger Mode Options:
-  #   "INTERVAL"       : Triggers every X waves (configured by trigger-every-waves).
-  #   "SPECIFIC_WAVES" : Triggers only on listed wave numbers (configured by specific-waves).
-  #   "STAGE_BASED"    : Triggers per wave range / stage intervals (configured by stage-triggers).
-  mode: "INTERVAL"
-
-  # [INTERVAL MODE] Trigger upgrade selection menu every X waves cleared
-  trigger-every-waves: 5
-
-  # [SPECIFIC_WAVES MODE] List of wave numbers that offer upgrades
-  specific-waves:
-    - 5
-    - 10
-    - 15
-    - 20
-    - 25
-    - 30
-
-  # [STAGE_BASED MODE] Configure different upgrade frequencies per stage / wave range
-  stage-triggers:
-    stage_1:
-      min-wave: 1
-      max-wave: 10
-      interval: 5
-    stage_2:
-      min-wave: 11
-      max-wave: 30
-      interval: 3
-
-  # Default maximum upgrade slots per player (limits active different upgrade types)
-  default-max-slots: 3
-
-  # Class-specific upgrade slot limits (overrides default-max-slots per class)
-  class-slots:
-    Tank: 4
-    Warrior: 3
-    Archer: 3
-    Mage: 2
-    Alchemist: 4
-    Juggernaut: 2
+  material: "RECOVERY_COMPASS"
+  slot: 22
+  base-cost: 150.0
+  wave-factor: 25.0
+  max-rerolls-per-wave: 3
+  # Tiered multipliers per reroll attempt:
+  # Attempt 1: BaseBracket * 10
+  # Attempt 2: Attempt 1 * 8
+  # Attempt 3: Attempt 2 * 7
+  multipliers:
+    1: 10.0
+    2: 8.0
+    3: 7.0
+  messages:
+    not-enough-money: "&c[MobArenav2] You need &e$%cost% &cto reroll upgrades! (Your balance: &e$%balance%&c)"
+    limit-reached: "&c[MobArenav2] You have reached the maximum reroll limit for this wave! (%max%/%max%)"
+    success: "&a[MobArenav2] Rerolled upgrades for &e$%cost%&a! &7(Wave reroll: &e%count%/%max%&7)"
 
 # ==========================================
-# SYSTEM MESSAGES
+# CELEBRATION & VICTORY REWARDS
 # ==========================================
-messages:
-  # Basic Errors
-  no-permission: "%prefix%&cYou do not have permission to use this command!"
-  arena-not-found: "%prefix%&cArena not found!"
-  player-only: "&cOnly players can use this command!"
+celebrations:
+  milestone-waves:
+    interval: 5
+    title: "&6&l★ WAVE %wave% CLEARED! ★"
+    subtitle: "&ePrepare for the upcoming challenges!"
+    fireworks: true
 
-  # Join / Leave
-  arena-full: "&cThis arena is currently full!"
-  arena-running: "&cThis arena is already running!"
-  already-in-arena: "&cYou are already in an arena!"
-  join-success: "&aSuccessfully joined Arena &e%arena%&a! Waiting for admin to start..."
-  leave-success: "&eYou have safely left the arena."
+  victory:
+    title: "&#FFAA00&l★ VICTORY ACHIEVED! ★"
+    subtitle: "&#55FF55&lAll waves conquered! You are the Arena Champion!"
+    broadcast: "&6[MobArenav2] &eTeam &f%players% &ehas conquered arena &b%arena%&e!"
+    firework-count: 5
 
-  # Match & Boss Announcements
-  arena-start:
-    chat: "%prefix%&c&lThe battle has begun! Prepare yourself!"
-    title: "&c&lBATTLE START"
-    subtitle: "&eDefend the arena!"
-  arena-end: "&a&lThe battle has ended! Thank you for playing."
-  wave-start:
-    actionbar: "&e⚔ Wave &b%wave% &ehas started! ⚔"
-  boss-spawn: "&4&l⚠ BOSS %boss_name% HAS APPEARED! ⚠"
-  supply-drop:
-    chat: "%prefix%&b&lA Supply Drop has landed at the center!"
-    sound: "BLOCK_BEACON_ACTIVATE"
+# ==========================================
+# COMBAT & MOB HIT DELAY CONFIGURATION
+# ==========================================
+combat:
+  # Invulnerability cooldown (in ticks) when arena mobs receive damage from players.
+  # 10 ticks = 0.5s (Vanilla default).
+  # Set to 0 for instant, rapid-hit arcade combat without damage delays/immune frames.
+  mob-hit-delay-ticks: 10
 
-  # Endless Mode Voting
-  vote-start: "&bVoting for Endless Mode has started... You have 30 seconds!"
-  vote-yes: "&aThe majority voted to CONTINUE. Welcome to ENDLESS MODE!"
-  vote-no: "&cThe majority voted to STOP. The arena is now closing..."
+# ==========================================
+# DATABASE STORAGE CONFIGURATION (v8.0.0)
+# Supports SQLITE (embedded mobarena.db) or MYSQL/MARIADB
+# ==========================================
+database:
+  type: "SQLITE" # SQLITE or MYSQL
+  sqlite:
+    file: "mobarena.db"
+  mysql:
+    host: "localhost"
+    port: 3306
+    database: "mobarena"
+    username: "root"
+    password: ""
+    pool:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
 
-  # Setup System (Admin Only)
-  setup-mode-enter: "&aYou have entered Setup mode for Arena &e%arena%&a. Use the Blaze Rod to set positions (P1, P2)."
-  setup-mode-exit: "&eExited Setup mode."
-  set-p1: "&aSuccessfully set Point 1 (P1) at your location."
-  set-p2: "&aSuccessfully set Point 2 (P2) at your location."
-  set-spawn: "&aSuccessfully added a new Spawnpoint!"
-  set-lobby: "&aSuccessfully set the Lobby location."
+# ==========================================
+# [v8.3.0] SUPPORT MOBS SYSTEM CONFIGURATION
+# High-priority tactical support witches:
+# - Healer Witch: Green glow, 64m aura healing 5% Max HP to mobs/bosses.
+# - War Witch (Buffer): Red glow, 48m aura stacking Strength (No Cap) every 5s.
+# ==========================================
+support-mobs:
+  healer_witch:
+    display-name: "&#55FF55&l[Healer Witch]"
+    glow-color: "GREEN"
+    scale: 1.25
+    base-hp: 80.0
+    hp-per-wave: 6.0
+    max-hp-cap: 400.0
+    aura-radius: 64.0
+    heal-percent: 0.05
+    pulse-interval-seconds: 4
+
+  buffer_witch:
+    display-name: "&#FF5555&l[War Witch]"
+    glow-color: "RED"
+    scale: 1.25
+    base-hp: 80.0
+    hp-per-wave: 6.0
+    max-hp-cap: 400.0
+    aura-radius: 48.0
+    pulse-interval-seconds: 5
+    buff-duration-seconds: 10
+    max-strength-cap: -1 # -1 = No Cap (Infinite Stacking)

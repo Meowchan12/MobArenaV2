@@ -8,7 +8,7 @@ category:
   id: "casino_utilities"
   display-name: "&#FFAA00&lCASINO & DRAFT UTILITIES"
   material: KELP
-  slot: 24
+  slot: 25
   lore:
     - "&7&m---------------------"
     - "&fBuy utility passes and reroll tickets."
@@ -36,30 +36,58 @@ items:
       fail-message: "&c[Shop] You need at least 500 Casino Chips!"
     input-take-command: "casino take %player% 500"
     output-actions:
-      - "command: ma giveitem %player% reroll_ticket 1"
       - "sound: ITEM_BOOK_PAGE_TURN 1.0 1.0"
       - "message: &e[MobArena Shop] Purchased 1x Upgrade Reroll Ticket!"
 
-  insurance_pass:
+  upgrade_pin_permit:
     category: "casino_utilities"
-    slot: 24
-    display-name: "&#FF55FF&lArena Insurance Pass"
-    material: GOLD_NUGGET
+    slot: 22
+    display-name: "&#FFD700&lUpgrade Pin License"
+    material: NAME_TAG
     lore:
       - "&7&m---------------------"
-      - "&fProtects 70% of your Vault rewards if team loses!"
-      - "&fPrice: &d%cost% Casino Chips"
+      - "&fGrants the ability to &e&lPin / Lock &fan upgrade"
+      - "&fduring wave selection when rerolling!"
+      - "&fRight-click an upgrade card to pin it."
+      - "&a✔ Permanent Perk &8(Unlocks for account)"
+      - "&fPrice: &6%cost% Casino Chips"
       - "&7&m---------------------"
     price-type: CUSTOM_COMMAND
-    base-cost: 1200.0
+    base-cost: 2500.0
     cost-multiplier: 1.0
-    max-level: 99
+    max-level: 1
     input-check:
       placeholder: "%casino_chips_amount%"
-      required-value: 1200.0
-      fail-message: "&c[Shop] You need at least 1200 Casino Chips!"
-    input-take-command: "casino take %player% 1200"
+      required-value: 2500.0
+      fail-message: "&c[Shop] You need at least 2500 Casino Chips!"
+    input-take-command: "casino take %player% 2500"
     output-actions:
-      - "command: ma giveitem %player% insurance_pass 1"
-      - "sound: ENTITY_EXPERIENCE_ORB_PICKUP 1.0 1.5"
-      - "message: &d[MobArena Shop] Purchased 1x Arena Insurance Pass!"
+      - "sound: UI_TOAST_CHALLENGE_COMPLETE 1.0 1.2"
+      - "message: &a[MobArena Shop] Unlocked Upgrade Pin License! You can now Pin upgrades when rerolling!"
+
+  casino_hephaestus_license:
+    category: "casino_utilities"
+    slot: 24
+    display-name: "&#FFAA00&lHephaestus' Blessing License"
+    material: ANVIL
+    lore:
+      - "&7&m---------------------"
+      - "&fUnlocks the &6&lHephaestus' Blessing &fSuper Upgrade"
+      - "&finto your arena card draft pool!"
+      - "&fAllows mob kills to drop mystical shards that repair"
+      - "&fall worn armor and items in inventory!"
+      - "&a✔ Permanent Perk &8(Unlocks for account)"
+      - "&fPrice: &e%cost% Casino Chips"
+      - "&7&m---------------------"
+    price-type: CUSTOM_COMMAND
+    base-cost: 3500.0
+    cost-multiplier: 1.0
+    max-level: 1
+    input-check:
+      placeholder: "%casino_chips_amount%"
+      required-value: 3500.0
+      fail-message: "&c[Shop] You need at least 3500 Casino Chips!"
+    input-take-command: "casino take %player% 3500"
+    output-actions:
+      - "sound: UI_TOAST_CHALLENGE_COMPLETE 1.0 1.5"
+      - "message: &a[MobArena Shop] Unlocked Hephaestus' Blessing License! This super repair upgrade can now appear in battle!"

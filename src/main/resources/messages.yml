@@ -1,0 +1,90 @@
+# ==========================================================
+# MOBARENA V2 - SYSTEM MESSAGES & LOCALIZATION (v8.1.0)
+# Supports Minecraft color codes (&a, &b), RGB Hex (&#FFAA00)
+# Placeholders: %player%, %arena%, %wave%, %class%, %count%, %max%
+# ==========================================================
+
+prefix: "&#00FFFF&l[MobArena] &f"
+
+general:
+  no-permission: "&#FF5555&l[!] &cYou do not have permission to execute this command."
+  player-only: "&#FF5555&l[!] &cThis command can only be executed by in-game players."
+  arena-not-found: "&#FF5555&l[!] &cArena &#FFAA00%arena% &cdoes not exist!"
+  arena-already-running: "&#FF5555&l[!] &cArena &#FFAA00%arena% &cis already running!"
+  arena-not-running: "&#FF5555&l[!] &cArena &#FFAA00%arena% &cis not currently running."
+  reloaded: "&#55FF55&l✔ &aConfiguration and messages successfully reloaded!"
+
+arena:
+  joined: "&#55FF55&l✔ &aYou joined arena &#FFAA00%arena%&a! Choose a class and type &#FFFF55/ma ready&a."
+  already-in-arena: "&#FF5555&l[!] &cYou are already participating in an arena match!"
+  arena-full: "&#FF5555&l[!] &cArena &#FFAA00%arena% &cis full (%count%/%max% players)!"
+  left: "&#FFAA00&l➡ &eYou have left the arena."
+  not-in-arena: "&#FF5555&l[!] &cYou are not currently in any arena match."
+  player-ready: "&#55FF55✔ &a%player% is READY! &#888888(%count%/%max%)"
+  player-unready: "&#FFAA00⚠ &e%player% is no longer ready. &#888888(%count%/%max%)"
+  need-class: "&#FF5555&l[!] &cYou must select a class first before getting ready!"
+  spectating: "&#00FFFF&l👁 &bNow spectating arena &#FFAA00%arena%&b. Type &#FFFF55/ma leave &bto exit."
+  countdown: "&#FFFF55⏳ Match starting in &#FFAA00%seconds% &fseconds..."
+  match-started: "&#55FF55&l⚔ MATCH STARTED! &fPrepare for battle!"
+  match-ended: "&#FFAA00&l🏁 Arena &#FFFF55%arena% &ehas concluded! Well fought, warriors!"
+  force-ended: "&#FF5555&l[!] &cThe match was forcefully terminated by an administrator."
+
+classes:
+  selected: "&#55FF55&l✔ &aSelected class: &#00FFFF&l%class%"
+  class-locked: "&#FF5555&l[!] &cClass &#FFAA00%class% &cis locked or you lack permission!"
+  class-full: "&#FF5555&l[!] &cClass &#FFAA00%class% &chas reached its player limit (%count%/%max%)!"
+  cannot-change: "&#FF5555&l[!] &cYou cannot switch classes while the match is in progress!"
+
+wave:
+  cleared-banner: "&#00FFFF&l✦ WAVE %wave% CLEARED! ✦"
+  boss-cleared-banner: "&#FFAA00&l✦ BOSS WAVE %wave% CLEARED! ✦"
+  button-choose-buff: "&#FFAA00&l[⚡ CHOOSE BUFF (%count%)]"
+  button-choose-buff-hover: "&a&lClick to open your Upgrade Selection GUI!"
+  button-view-buffs: "&#55FF55&l[📜 VIEW BUFFS]"
+  button-view-buffs-hover: "&b&lClick to inspect your active upgrades!"
+  actionbar-upgrade-phase: "&#00FFFF&l✦ UPGRADE PHASE ✦ &#FFFF55&lChoose your buffs! Next wave paused..."
+  actionbar-countdown: "&#FFFF55&l⏳ Next wave in &#FFFFFF&l%seconds% &#FFFF55&lseconds..."
+  actionbar-mobs-remaining: "&#FF5555&l⚔ Mobs remaining: &#FFFF55&l%count% &#FF5555&l⚔"
+  actionbar-paused-reminder: "&#FFFF55&l[⚡ Upgrade paused: Use &#55FF55&l/ma upgrade &#FFFF55&lanytime to claim!]"
+  reward-stashed: "&#55FF55✦ Wave %wave% Reward secured & stashed! ✦"
+
+upgrades:
+  upgraded: "&#55FF55&l✔ UPGRADED: &f%name% &#888888• &#FFFF55Slots: &#00FFFF%slots%&#888888/&#00FFFF%max_slots%"
+  click-to-view-prompt: "&#FFFF55To view all your active upgrades in this match: "
+  no-pending: "&#FF5555&l[!] &cYou do not have any pending upgrade choices right now!"
+  no-pending-tip: "&#FFFF55Tip: Use &#55FF55/ma myupgrades &#FFFF55to view your active upgrades or &#55FF55/ma upgrades &#FFFF55to preview all upgrades."
+  pinned: "&#55FF55&l✔ Pinned card: &f%name% &#888888[%pins%/10 Pins Left]"
+  unpinned: "&#FFAA00&l✖ Unpinned card: &f%name%"
+  banished: "&#FF5555&l✖ Banished card: &f%name% &#888888(Will not appear again this match) [%banishes%/10 Banishes Left]"
+  pin-out-of-uses: "&#FF5555&l[!] &cYou have used all 10 Pin charges for this match!"
+  banish-out-of-uses: "&#FF5555&l[!] &cYou have used all 10 Banish charges for this match!"
+
+shop:
+  purchased: "&#55FF55&l✔ [MobArena Shop] &#FFFF55Purchased %name% &#FFFF55[Lv.%level%/%max_level%]!"
+  max-level: "&#FF5555&l[!] &cYou have already reached the maximum level for this upgrade!"
+  insufficient-vault: "&#FF5555&l[!] &cYou need &#FFAA00$%cost% &cVault Money to purchase this item!"
+  insufficient-points: "&#FF5555&l[!] &cYou need &#FFAA00%cost% &cPlayerPoints to purchase this item!"
+  hephaestus-unlocked: "&#55FF55&l✔ [MobArena Shop] &#FFAA00Unlocked Hephaestus' Blessing License! This super repair upgrade can now appear in battle!"
+
+siege:
+  warning-actionbar: "&#FFFF55&l⚠ Warning: Monsters are breaking your barrier! [%hits%/3] ⚠"
+  barrier-broken: "&#FF5555&l⚔ Siege Breaker: Monster shattered your barrier! ⚔"
+
+freeze:
+  title: "&#00FFFF&l❄ ABSOLUTE ZERO ❄"
+  subtitle: "&#FF5555The air freezes solid! Prepare for the Frostbite!"
+  shatter: "&#FF5555❄ &l[GLACIAL SHATTER] &cLost &#AA0000%damage%% Max HP &cTrue Damage!"
+
+top:
+  match-summary-title: "&#FFAA00&lMATCH SUMMARY &#888888- &#FFFF55%arena%"
+  final-wave: "&#FFFFFF Final Wave: &#00FFFF%wave%"
+  click-here: "&#55FF55&l[CLICK HERE]"
+  hover-text: "&#FFAA00&l%name% &#888888(Match Overview)\n&#FFFF55• Combat Class: &#00FFFF%class%\n&#FFFF55• Mobs Eliminated: &#FF5555%kills% Mobs\n&#FFFF55• Bosses Slain: &#FF55FF%bosses% Bosses\n&#FFFF55• Damage Dealt: &#55FF55%damage% DMG\n&#888888&m--------------------\n&#FFFF55▶ Click to inspect full match details GUI!"
+
+stats:
+  title: "&#FFAA00&l LIFETIME STATS &#888888- &#FFFF55%name%"
+  kills: "&#FFFF55 Kills: &#55FF55%kills%"
+  wins: "&#FFFF55 Wins: &#55FF55%wins%"
+  games-played: "&#FFFF55 Games Played: &#55FF55%games%"
+  highest-wave: "&#FFFF55 Highest Wave: &#55FF55%highest_wave%"
+  favorite-class: "&#FFFF55 Favorite Class: &#55FF55%favorite_class%"

@@ -1,0 +1,97 @@
+# ==========================================
+# MobArenav2 v7.0 - Boss Raid Rewards
+# ==========================================
+# This file controls rewards given to players when they defeat a boss.
+# Rewards are distributed based on damage dealt (Damage Ranking).
+#
+# --- HOW IT WORKS ---
+# 1. When a boss spawns, the plugin starts tracking damage from each player.
+# 2. When the boss dies, players are ranked by total damage dealt.
+# 3. Players who dealt less than 'min-damage-percent' get NOTHING (Anti-Leech).
+# 4. Remaining players receive rewards based on their rank tier.
+#
+# --- TIER RANK FORMAT ---
+# rank: "1"       -> Exactly rank 1 (Top 1)
+# rank: "2-5"     -> Rank 2 through 5
+# rank: "6+"      -> Rank 6 and above (everyone else who qualified)
+#
+# --- PLACEHOLDERS ---
+# %player%  -> Player name
+# %rank%    -> Damage rank (1 = highest)
+# %damage%  -> Total damage dealt
+# %percent% -> Damage as % of boss HP
+# %tier%    -> Tier display name
+# %money%   -> Money reward amount
+# %points%  -> PlayerPoints reward amount
+
+# ==========================================
+# DEFAULT REWARDS (Used if boss has no specific reward section)
+# ==========================================
+default:
+  min-damage-percent: 1.0  # Must deal at least 1% of boss HP
+
+  tiers:
+    top1:
+      rank: "1"
+      name: "&6&lMVP"
+      money: 5000
+      points: 100
+      message: "&6&l[BOSS SLAYER] &eYou are the &6MVP&e! Rank #%rank% | Damage: %damage% (%percent%%) | +$%money% +%points% Points"
+      sound: "UI_TOAST_CHALLENGE_COMPLETE"
+      commands: []
+
+    top5:
+      rank: "2-5"
+      name: "&b&lTop Contributor"
+      money: 2500
+      points: 50
+      message: "&b&l[BOSS SLAYER] &eRank #%rank% | Damage: %damage% (%percent%%) | +$%money% +%points% Points"
+      sound: "ENTITY_PLAYER_LEVELUP"
+      commands: []
+
+    participation:
+      rank: "6+"
+      name: "&7Participant"
+      money: 500
+      points: 10
+      message: "&7[BOSS SLAYER] &fRank #%rank% | Damage: %damage% (%percent%%) | +$%money% +%points% Points"
+      sound: "ENTITY_EXPERIENCE_ORB_PICKUP"
+      commands: []
+
+# ==========================================
+# BOSS-SPECIFIC REWARDS (Override default)
+# ==========================================
+# Use the boss key from bosses.yml to create custom reward tiers.
+# Example: The "incarnation_of_the_radius" super boss gives much better rewards.
+
+# incarnation_of_the_radius:
+#   min-damage-percent: 0.5
+#
+#   tiers:
+#     top1:
+#       rank: "1"
+#       name: "&4&lDragon Slayer"
+#       money: 50000
+#       points: 500
+#       message: "&4&l[LEGENDARY] &c%player% has slain the Incarnation! Rank #%rank% | +$%money% +%points% Points"
+#       sound: "UI_TOAST_CHALLENGE_COMPLETE"
+#       commands:
+#         - "give %player% netherite_sword{display:{Name:'\"\\u00a74Blade of the Radius\"'}} 1"
+#
+#     top5:
+#       rank: "2-5"
+#       name: "&c&lHero"
+#       money: 25000
+#       points: 250
+#       message: "&c&l[RAID HERO] &eRank #%rank% | +$%money% +%points% Points"
+#       sound: "ENTITY_PLAYER_LEVELUP"
+#       commands: []
+#
+#     participation:
+#       rank: "6+"
+#       name: "&7Survivor"
+#       money: 5000
+#       points: 50
+#       message: "&7[RAID] &fYou survived the raid! Rank #%rank% | +$%money% +%points% Points"
+#       sound: "ENTITY_EXPERIENCE_ORB_PICKUP"
+#       commands: []

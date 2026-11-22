@@ -2,6 +2,7 @@ package vn.meowchan12.mobarenav2.manager;
 
 import com.google.common.base.Charsets;
 import org.bukkit.Location;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import vn.meowchan12.mobarenav2.MobArenav2;
@@ -11,6 +12,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 public class ConfigManager {
 
@@ -64,6 +71,12 @@ public class ConfigManager {
         }
 
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+
+        // [v8.4.0 MIGRATION]: Migrate legacy flat 'upgrade-system.*' keys into 'upgrade-system.default.*'
+        if (fileName.equals("settings.yml")) {
+            migrateLegacyUpgradeSystemSection(config);
+        }
+
         InputStream defConfigStream = plugin.getResource(fileName);
 
         if (defConfigStream != null) {
@@ -81,19 +94,160 @@ public class ConfigManager {
         return config;
     }
 
+    /**
+     * [v8.4.0]: Migrates legacy v8.3.x flat upgrade-system settings directly into upgrade-system.default
+     * so existing server owners preserve their custom trigger/slot rules cleanly.
+     */
+    private void migrateLegacyUpgradeSystemSection(YamlConfiguration config) {
+        ConfigurationSection upgSec = config.getConfigurationSection("upgrade-system");
+        if (upgSec == null) return;
+
+        String[] legacyKeys = {
+                "enabled", "mode", "trigger-every-waves", "specific-waves",
+                "stage-triggers", "default-max-slots", "class-slots", "stack-with-interval"
+        };
+
+        boolean hasLegacyKeys = false;
+        for (String key : legacyKeys) {
+            if (upgSec.contains(key)) {
+                hasLegacyKeys = true;
+                break;
+            }
+        }
+
+        if (!hasLegacyKeys) return;
+
+        ConfigurationSection defaultSec = upgSec.getConfigurationSection("default");
+        if (defaultSec == null) {
+            defaultSec = upgSec.createSection("default");
+            for (String key : legacyKeys) {
+                if (!upgSec.contains(key)) continue;
+                Object val = upgSec.get(key);
+                if (val instanceof ConfigurationSection nested) {
+                    ConfigurationSection targetNested = defaultSec.createSection(key);
+                    copySection(nested, targetNested);
+                } else if (val instanceof List<?> list) {
+                    defaultSec.set(key, new ArrayList<>(list));
+                } else {
+                    defaultSec.set(key, val);
+                }
+            }
+            plugin.getLogger().info("[MobArenav2] Migrated legacy upgrade-system settings into 'upgrade-system.default' in settings.yml.");
+        }
+
+        // Remove obsolete flat keys to keep settings.yml clean
+        for (String key : legacyKeys) {
+            upgSec.set(key, null);
+        }
+    }
+
+    /**
+     * [v8.4.0 CENTRALIZED]: Ensures every non-default arena has its own config block under
+     * settings.yml -> 'upgrade-system.arenas.<arena_name>' cloned from 'upgrade-system.default'.
+     * Saves settings.yml to disk ONLY when at least one new arena block is created.
+     */
+    public void syncArenaUpgradeConfigs(Collection<Arena> arenas) {
+        if (settingsConfig == null || arenas == null || arenas.isEmpty()) return;
+
+        ConfigurationSection defaultSec = settingsConfig.getConfigurationSection("upgrade-system.default");
+        if (defaultSec == null) return;
+
+        ConfigurationSection arenasSec = settingsConfig.getConfigurationSection("upgrade-system.arenas");
+        Set<String> existingLower = new HashSet<>();
+        if (arenasSec != null) {
+            for (String key : arenasSec.getKeys(false)) {
+                existingLower.add(key.toLowerCase());
+            }
+        }
+
+        List<String> newlyProvisioned = new ArrayList<>();
+        for (Arena arena : arenas) {
+            if (arena == null || arena.getName() == null) continue;
+            String arenaName = arena.getName().trim();
+            if (arenaName.isEmpty() || arenaName.equalsIgnoreCase("default")) continue;
+
+            if (!existingLower.contains(arenaName.toLowerCase())) {
+                if (arenasSec == null) {
+                    arenasSec = settingsConfig.createSection("upgrade-system.arenas");
+                }
+                ConfigurationSection targetSec = arenasSec.createSection(arenaName);
+                copySection(defaultSec, targetSec);
+                existingLower.add(arenaName.toLowerCase());
+                newlyProvisioned.add(arenaName);
+            }
+        }
+
+        if (!newlyProvisioned.isEmpty()) {
+            saveSettings();
+            plugin.getLogger().info("[MobArenav2] Auto-generated upgrade-system config from 'default' in settings.yml for arena(s): " + String.join(", ", newlyProvisioned));
+        }
+    }
+
+    /**
+     * [v8.4.0 CENTRALIZED]: Ensures a single arena has an entry under settings.yml -> 'upgrade-system.arenas.<arenaName>'.
+     */
+    public void ensureArenaUpgradeConfig(String arenaName) {
+        if (settingsConfig == null || arenaName == null) return;
+        String cleanName = arenaName.trim();
+        if (cleanName.isEmpty() || cleanName.equalsIgnoreCase("default")) return;
+
+        ConfigurationSection defaultSec = settingsConfig.getConfigurationSection("upgrade-system.default");
+        if (defaultSec == null) return;
+
+        ConfigurationSection arenasSec = settingsConfig.getConfigurationSection("upgrade-system.arenas");
+        if (arenasSec != null) {
+            for (String existingKey : arenasSec.getKeys(false)) {
+                if (existingKey.equalsIgnoreCase(cleanName)) {
+                    return; // Already provisioned
+                }
+            }
+        } else {
+            arenasSec = settingsConfig.createSection("upgrade-system.arenas");
+        }
+
+        ConfigurationSection targetSec = arenasSec.createSection(cleanName);
+        copySection(defaultSec, targetSec);
+        saveSettings();
+        plugin.getLogger().info("[MobArenav2] Auto-generated upgrade-system config from 'default' in settings.yml for new arena: " + cleanName);
+    }
+
+    private void copySection(ConfigurationSection source, ConfigurationSection target) {
+        if (source == null || target == null) return;
+        for (String key : source.getKeys(false)) {
+            Object val = source.get(key);
+            if (val instanceof ConfigurationSection nestedSource) {
+                ConfigurationSection nestedTarget = target.createSection(key);
+                copySection(nestedSource, nestedTarget);
+            } else if (val instanceof List<?> list) {
+                target.set(key, new ArrayList<>(list));
+            } else {
+                target.set(key, val);
+            }
+        }
+    }
+
+    public void saveSettings() {
+        if (settingsConfig == null) return;
+        File file = new File(plugin.getDataFolder(), "settings.yml");
+        try {
+            settingsConfig.save(file);
+        } catch (IOException e) {
+            plugin.getLogger().severe("[MobArenav2] Could not save settings.yml: " + e.getMessage());
+        }
+    }
+
     // ========================================================
     // SAFE SAVE MECHANISM (FILE PROTECTION FIREWALL)
+    // [v8.2.0 ASYNC OPTIMIZATION]: Asynchronous disk flush
     // ========================================================
     public void saveArenaCoords(Arena arena) {
         File file = new File(arenasFolder, arena.getName() + ".yml");
 
-        // [FIX] Lấy Config trực tiếp từ RAM của Arena để bảo toàn dữ liệu MVP (last-match)
         FileConfiguration config = arena.getConfig();
         if (config == null) {
             config = new YamlConfiguration();
         }
 
-        // Bức tường lửa bảo vệ File khỏi lỗi cú pháp (Syntax Error)
         if (file.exists()) {
             try {
                 YamlConfiguration testSyntax = new YamlConfiguration();
@@ -106,7 +260,6 @@ public class ConfigManager {
             }
         }
 
-        // Cập nhật tọa độ vào Config trên RAM
         if (arena.getP1() != null) config.set("coords.p1", serializeLocation(arena.getP1()));
         if (arena.getP2() != null) config.set("coords.p2", serializeLocation(arena.getP2()));
         if (arena.getLobby() != null) config.set("coords.lobby", serializeLocation(arena.getLobby()));
@@ -120,7 +273,6 @@ public class ConfigManager {
             i++;
         }
 
-        // [MỚI] Lưu tọa độ Hòm thính (Supply Points)
         config.set("coords.supplypoints", null);
         int j = 1;
         for (Location loc : arena.getSupplypoints()) {
@@ -128,14 +280,18 @@ public class ConfigManager {
             j++;
         }
 
-        try {
-            config.save(file); // Ghi đè toàn bộ (MVP + Tọa độ + Setting) xuống ổ cứng
-            arena.setConfig(config); // Gắn lại vào Arena để đồng bộ
-            plugin.getLogger().info("[MobArenav2] Successfully saved FULL config & data for arena: " + arena.getName());
-        } catch (IOException e) {
-            plugin.getLogger().severe("[MobArenav2] Could not save arena data for " + arena.getName());
-            e.printStackTrace();
-        }
+        // [v8.2.0]: Keep memory instance updated on RAM, write to disk asynchronously off the main thread
+        arena.setConfig(config);
+        final FileConfiguration finalConfig = config;
+        CompletableFuture.runAsync(() -> {
+            try {
+                finalConfig.save(file);
+                plugin.getLogger().info("[MobArenav2] Successfully saved FULL config & data asynchronously for arena: " + arena.getName());
+            } catch (IOException e) {
+                plugin.getLogger().severe("[MobArenav2] Could not save arena data for " + arena.getName());
+                e.printStackTrace();
+            }
+        });
     }
 
     public void createArenaTemplate(String arenaName) {

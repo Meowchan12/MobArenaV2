@@ -6,6 +6,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -20,20 +21,49 @@ import vn.meowchan12.mobarenav2.arena.ArenaScoreboard;
 import vn.meowchan12.mobarenav2.exceptions.InvalidConfigurationException;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.bukkit.NamespacedKey;
 
 public class ArenaManager {
 
     private final MobArenav2 plugin;
     private final Map<String, Arena> arenas = new HashMap<>();
+    private final Map<UUID, Location> pendingRespawnLocations = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Set<UUID> internalGameModeSwitches = new HashSet<>();
 
     public ArenaManager(MobArenav2 plugin) {
         this.plugin = plugin;
+    }
+
+    public boolean isInternalGameModeSwitch(UUID uuid) {
+        return uuid != null && internalGameModeSwitches.contains(uuid);
+    }
+
+    public void setGameModeInternally(Player player, GameMode gameMode) {
+        if (player == null || gameMode == null) return;
+        internalGameModeSwitches.add(player.getUniqueId());
+        try {
+            player.setGameMode(gameMode);
+        } finally {
+            internalGameModeSwitches.remove(player.getUniqueId());
+        }
+    }
+
+    public void setPendingRespawnLocation(UUID uuid, Location loc) {
+        if (uuid != null && loc != null) {
+            pendingRespawnLocations.put(uuid, loc);
+        }
+    }
+
+    public Location getAndRemovePendingRespawnLocation(UUID uuid) {
+        if (uuid == null) return null;
+        return pendingRespawnLocations.remove(uuid);
     }
 
     public void addArena(Arena arena) { arenas.put(arena.getName().toLowerCase(), arena); }
@@ -104,6 +134,9 @@ public class ArenaManager {
             addArena(arena);
             plugin.getLogger().info("[MobArenav2] Loaded arena blueprint: " + name);
         }
+
+        // [v8.4.0 CENTRALIZED]: Auto-provision upgrade-system entries in settings.yml for all detected arenas
+        plugin.getConfigManager().syncArenaUpgradeConfigs(getAllArenas());
     }
 
     public void reloadArenas() {
@@ -157,6 +190,8 @@ public class ArenaManager {
                 }
             }
         }
+        // [v8.4.0 CENTRALIZED]: Auto-provision upgrade-system entries for any newly added arenas
+        plugin.getConfigManager().syncArenaUpgradeConfigs(getAllArenas());
         plugin.getLogger().info("[MobArenav2] Hot-reloaded all arena configurations safely.");
     }
 
@@ -211,18 +246,18 @@ public class ArenaManager {
     }
 
     // ==========================================
-    // VÁ LỖI THAM GIA TRẬN ĐẤU (BUG #3)
+    // FIX ARENA JOIN BUG (#3)
     // ==========================================
     public boolean joinArena(Player player, String arenaName) {
         UUID uuid = player.getUniqueId();
 
-        // 1. Chặn join nếu đang chơi (Lobby)
+        // 1. Prevent joining if already playing in lobby
         if (isPlaying(player)) {
             player.sendMessage("§c[MobArenav2] You are already in an arena!");
             return false;
         }
 
-        // 2. [MỚI] Chặn join nếu đang làm Spectator (Người chết)
+        // 2. Prevent joining if currently spectating
         if (isSpectating(player)) {
             player.sendMessage("§c[MobArenav2] You are spectating! Use /ma leave first.");
             return false;
@@ -245,9 +280,9 @@ public class ArenaManager {
             return false;
         }
 
-        // 3. [MỚI] Chặn join nếu trận đấu đang diễn ra
-        if (arena.isRunning()) {
-            player.sendMessage("§c[MobArenav2] The battle in this arena has already started!");
+        // 3. Block join if the arena is already running or countdown has begun
+        if (arena.isRunning() || arena.isStarting()) {
+            player.sendMessage("§c[MobArenav2] The battle in this arena has already started or is currently starting!");
             return false;
         }
 
@@ -357,19 +392,27 @@ public class ArenaManager {
                             }
                         }
 
-                        player.setGameMode(GameMode.SURVIVAL);
+                        setGameModeInternally(player, GameMode.SURVIVAL);
                         player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
 
                         player.sendMessage("§a[MobArenav2] You have joined arena: §e" + arena.getName());
                         player.sendMessage("§b➡ Type §e/ma class §bto select your loadout.");
 
                         // =====================================================================
-                        // [v5.2 FEATURE]: SERVER-WIDE JOIN ANNOUNCEMENT (ENGLISH)
-                        // Broadcasts a stylish message to all players to attract team members!
+                        // [v5.2 FEATURE]: JOIN ANNOUNCEMENT (ENGLISH)
+                        // Configurable server-wide or arena-only announcement to prevent spamming survival
                         // =====================================================================
                         int currentCount = arena.getActivePlayers().size();
                         int limitPlayers = (config != null) ? config.getInt("settings.player-limits.max-players", 99) : 99;
-                        Bukkit.broadcastMessage("§6§l[MobArenav2] §e" + player.getName() + " §7has joined arena §b" + arena.getName() + "§7! §8[§e" + currentCount + "§7/§e" + limitPlayers + "§8] §bType §e/ma join " + arena.getName() + " §bto fight together!");
+                        String joinMsg = "§6§l[MobArenav2] §e" + player.getName() + " §7has joined arena §b" + arena.getName() + "§7! §8[§e" + currentCount + "§7/§e" + limitPlayers + "§8] §bType §e/ma join " + arena.getName() + " §bto fight together!";
+                        boolean broadcastAll = (plugin.getConfigManager() != null && plugin.getConfigManager().getSettings() != null)
+                                ? plugin.getConfigManager().getSettings().getBoolean("broadcast-join-to-all-server", plugin.getConfig().getBoolean("messages.broadcast-join-to-all-server", false))
+                                : plugin.getConfig().getBoolean("messages.broadcast-join-to-all-server", false);
+                        if (broadcastAll) {
+                            Bukkit.broadcastMessage(joinMsg);
+                        } else {
+                            arena.broadcastMessage(joinMsg);
+                        }
                     });
                 }
             }
@@ -409,7 +452,9 @@ public class ArenaManager {
 
             resetPlayerState(player);
 
-            player.setGameMode(GameMode.ADVENTURE);
+            setGameModeInternally(player, GameMode.ADVENTURE);
+            player.setFoodLevel(20);
+            player.setSaturation(20.0f);
             player.setInvulnerable(true);
 
             player.sendMessage("§7[MobArenav2] You are now spectating §e" + arena.getName());
@@ -418,19 +463,56 @@ public class ArenaManager {
         return true;
     }
 
+    /**
+     * [v7.2 FIX]: Immediately clear all active potion effects, absorption, fire, freeze ticks,
+     * arrows in body, and temporary combat data from the player.
+     */
+    public void clearAllPlayerEffects(Player player) {
+        if (player == null || !player.isOnline()) return;
+
+        // 1. Clear all active potion effects safely
+        for (PotionEffect effect : new ArrayList<>(player.getActivePotionEffects())) {
+            player.removePotionEffect(effect.getType());
+        }
+
+        // 2. Clear absorption hearts
+        player.setAbsorptionAmount(0.0);
+
+        // 3. Clear fire ticks and visual burning
+        player.setFireTicks(0);
+        player.setVisualFire(false);
+
+        // 4. Clear freeze ticks (powder snow / stray / breeze)
+        player.setFreezeTicks(0);
+
+        // 5. Clear embedded arrows
+        player.setArrowsInBody(0);
+
+        // 6. Remove temporary combat PDC keys
+        NamespacedKey dmKey = new NamespacedKey(plugin, "ma_death_mark");
+        player.getPersistentDataContainer().remove(dmKey);
+        NamespacedKey swCooldownKey = new NamespacedKey(plugin, "ma_second_wind_cd");
+        player.getPersistentDataContainer().remove(swCooldownKey);
+        NamespacedKey aegisKey = new NamespacedKey(plugin, "ma_super_aegis_used");
+        player.getPersistentDataContainer().remove(aegisKey);
+    }
+
     public void handlePlayerDeath(Player player, Arena arena) {
         if (player == null || !player.isOnline()) return;
 
         arena.getSpectators().add(player.getUniqueId());
 
-        // 1. Reset health and player state FIRST to stop death animation / knockback / fire
-        resetPlayerState(player);
+        // 1. Immediately purge all potion effects, fire, freeze, and reset player state
+        clearAllPlayerEffects(player);
+        resetPlayerState(player, arena);
         player.getInventory().clear();
-        player.setGameMode(GameMode.ADVENTURE);
-        player.setAllowFlight(true);
-        player.setFlying(true);
+        setGameModeInternally(player, GameMode.ADVENTURE);
+        player.setFoodLevel(20);
+        player.setSaturation(20.0f);
+        player.setAllowFlight(false);
+        player.setFlying(false);
         player.setInvulnerable(true);
-        player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0, false, false));
+        player.setInvisible(true); // Visual invisibility without potion effect icon or particles
 
         // 2. Safe Spectator Location lookup (spectatorSpawn -> arenaSpawn -> lobby)
         Location specSpawn = arena.getSpectatorSpawn();
@@ -443,13 +525,22 @@ public class ArenaManager {
 
         final Location targetSpecLoc = specSpawn;
 
-        // 3. Teleport 1 tick later so Bukkit/Paper completes the event pipeline cleanly!
+        // 3. Teleport 1 tick later and PURGE AGAIN to wipe any lingering or post-hit queued effects cleanly!
         if (targetSpecLoc != null && targetSpecLoc.getWorld() != null) {
             targetSpecLoc.getWorld().getChunkAt(targetSpecLoc).addPluginChunkTicket(plugin);
             targetSpecLoc.getWorld().getChunkAt(targetSpecLoc).load(true);
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (player.isOnline() && arena.getSpectators().contains(player.getUniqueId())) {
-                    player.teleport(targetSpecLoc);
+                if (player.isOnline()) {
+                    clearAllPlayerEffects(player);
+                    player.setHealth(20.0);
+                    player.setFoodLevel(20);
+                    player.setSaturation(20.0f);
+                    player.setFireTicks(0);
+                    player.setFreezeTicks(0);
+                    player.setAbsorptionAmount(0.0);
+                    if (arena.getSpectators().contains(player.getUniqueId())) {
+                        player.teleport(targetSpecLoc);
+                    }
                 }
             }, 1L);
         }
@@ -461,16 +552,32 @@ public class ArenaManager {
 
         if (activePlayers.isEmpty()) {
             arena.broadcastMessage("§c§l[MobArenav2] All players have died! The arena is over.");
+            // [v7.4.0 BUG 2 FIX]: If solo player died on screen, save original location and auto-respawn
+            ArenaPlayerProfile prof = arena.getPlayerProfiles().get(player.getUniqueId());
+            if (prof != null && prof.getOriginalLocation() != null) {
+                setPendingRespawnLocation(player.getUniqueId(), prof.getOriginalLocation());
+            }
+            if (player.isDead()) {
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (player.isOnline() && player.isDead()) {
+                        try {
+                            player.spigot().respawn();
+                        } catch (Throwable ignored) {}
+                    }
+                });
+            }
             arena.endArena(plugin);
         }
     }
 
     public void resetPlayerState(Player player) {
+        resetPlayerState(player, getArenaByPlayer(player));
+    }
+
+    public void resetPlayerState(Player player, Arena arena) {
         if (player == null || !player.isOnline()) return;
 
-        for (PotionEffect effect : player.getActivePotionEffects()) {
-            player.removePotionEffect(effect.getType());
-        }
+        clearAllPlayerEffects(player);
 
         AttributeInstance hpAttr = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
         if (hpAttr != null) hpAttr.setBaseValue(20.0);
@@ -478,25 +585,73 @@ public class ArenaManager {
         AttributeInstance dmgAttr = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.ATTACK_DAMAGE);
         if (dmgAttr != null) dmgAttr.setBaseValue(1.0);
 
+        AttributeInstance armorAttr = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.ARMOR);
+        if (armorAttr != null) armorAttr.setBaseValue(0.0);
+
+        AttributeInstance toughnessAttr = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.ARMOR_TOUGHNESS);
+        if (toughnessAttr != null) toughnessAttr.setBaseValue(0.0);
+
+        AttributeInstance speedAttr = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MOVEMENT_SPEED);
+        if (speedAttr != null) speedAttr.setBaseValue(0.1);
+
+        AttributeInstance atkSpeedAttr = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.ATTACK_SPEED);
+        if (atkSpeedAttr != null) atkSpeedAttr.setBaseValue(4.0);
+
+        if (vn.meowchan12.mobarenav2.utils.AttributeUtils.ENTITY_INTERACTION_RANGE != null) {
+            AttributeInstance reachAttr = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.ENTITY_INTERACTION_RANGE);
+            if (reachAttr != null) reachAttr.setBaseValue(3.0);
+        }
+
         player.setVelocity(new Vector(0, 0, 0));
         player.setFallDistance(0.0f);
 
-        player.setHealth(Math.min(player.getHealth(), 20.0));
+        player.setHealth(20.0);
         player.setFoodLevel(20);
         player.setSaturation(5.0f);
         player.setFireTicks(0);
+        player.setFreezeTicks(0);
+        player.setVisualFire(false);
+        player.setAbsorptionAmount(0.0);
         player.setInvulnerable(false);
         player.setAllowFlight(false);
         player.setFlying(false);
         player.setWalkSpeed(0.2f);
+        player.setInvisible(false);
+
+        // [v7.3.1 HOTFIX]: Reset all upgrade status of player
+        if (plugin.getUpgradeRegistry() != null) {
+            plugin.getUpgradeRegistry().dispatchReset(player, arena);
+        }
+
+        // [v7.5.0 PURGE]: Wipe all upgrades in profile upon death or leaving
+        if (arena != null && arena.getPlayerProfiles() != null) {
+            ArenaPlayerProfile profile = arena.getPlayerProfiles().get(player.getUniqueId());
+            if (profile != null) {
+                profile.clearUpgrades();
+            }
+        }
     }
 
     public void leaveArena(Player player) {
         Arena arena = getArenaByPlayer(player);
+        if (arena == null) {
+            for (Arena a : arenas.values()) {
+                if (a.getSpectators().contains(player.getUniqueId())) {
+                    arena = a;
+                    break;
+                }
+            }
+        }
         if (arena == null) return;
 
         boolean wasSpectator = arena.getSpectators().contains(player.getUniqueId());
-        ArenaPlayerProfile profile = arena.getPlayerProfiles().remove(player.getUniqueId());
+        ArenaPlayerProfile removedProfile = arena.getPlayerProfiles().remove(player.getUniqueId());
+        final ArenaPlayerProfile profile = (removedProfile != null)
+                ? removedProfile
+                : arena.getHistoricalProfiles().get(player.getUniqueId());
+        if (removedProfile != null && arena.isRunning()) {
+            arena.getHistoricalProfiles().put(player.getUniqueId(), removedProfile);
+        }
 
         if (wasSpectator) {
             arena.getSpectators().remove(player.getUniqueId());
@@ -506,8 +661,8 @@ public class ArenaManager {
         arena.getActiveVotes().remove(player.getUniqueId());
 
         player.getInventory().clear();
-        player.setGameMode(GameMode.SURVIVAL);
-        resetPlayerState(player);
+        setGameModeInternally(player, GameMode.SURVIVAL);
+        resetPlayerState(player, arena);
 
         Location leaveLoc = null;
         if (profile != null && profile.getOriginalLocation() != null) {
@@ -518,16 +673,33 @@ public class ArenaManager {
 
         if (leaveLoc != null && leaveLoc.getWorld() != null) {
             leaveLoc.getWorld().getChunkAt(leaveLoc).load(true);
-            player.teleport(leaveLoc);
+            if (player.isDead()) {
+                // [v7.4.0 BUG 2 FIX]: Dead players cannot teleport; cache respawn target and trigger auto-respawn
+                setPendingRespawnLocation(player.getUniqueId(), leaveLoc);
+                final Location targetLoc = leaveLoc;
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (player.isOnline() && player.isDead()) {
+                        try {
+                            player.spigot().respawn();
+                        } catch (Throwable ignored) {}
+                    } else if (player.isOnline()) {
+                        player.teleport(targetLoc);
+                    }
+                });
+            } else {
+                player.teleport(leaveLoc);
+            }
         }
 
-        plugin.getInventoryBackupManager().restoreBackup(player);
-
-        if (profile != null) {
-            if (profile.getScoreboard() != null) profile.getScoreboard().remove();
-            profile.distributeRewards(plugin);
-            plugin.getUserDataManager().removeData(player);
+        if (profile != null && profile.getScoreboard() != null) {
+            profile.getScoreboard().remove();
         }
+
+        plugin.getInventoryBackupManager().restoreBackup(player, () -> {
+            if (profile != null) {
+                profile.distributeRewards(plugin);
+            }
+        });
 
         player.sendMessage("§e[MobArenav2] You have left the arena and your items have been restored.");
 
@@ -538,6 +710,12 @@ public class ArenaManager {
                 arena.broadcastMessage("§c§l[MobArenav2] All active players have left! The arena is over.");
                 arena.endArena(plugin);
             }
+        } else if (!wasSpectator && arena.isStarting()) {
+            int minPlayers = arena.getConfig() != null ? arena.getConfig().getInt("settings.player-limits.min-players", 1) : 1;
+            if (arena.getActivePlayers().size() < minPlayers) {
+                arena.broadcastMessage("§c[MobArenav2] Countdown cancelled: A player left the lobby!");
+                arena.cancelReadyCountdown(plugin);
+            }
         }
     }
 
@@ -547,5 +725,148 @@ public class ArenaManager {
             leaveArena(player);
             plugin.getLogger().info("[MobArenav2] Player " + player.getName() + " disconnected mid-game. State saved and reset safely.");
         }
+    }
+
+    /**
+     * [v7.5.6]: Revive a spectator back to active player state inside a running arena.
+     */
+    public boolean revivePlayerInArena(Player player, Arena arena) {
+        if (player == null || !player.isOnline() || arena == null || !arena.isRunning()) return false;
+        UUID uuid = player.getUniqueId();
+        if (!arena.getSpectators().contains(uuid)) {
+            return false;
+        }
+
+        // 1. Remove from spectators
+        arena.getSpectators().remove(uuid);
+
+        // 2. Clear lingering spectator effects and restore survival game mode
+        clearAllPlayerEffects(player);
+        resetPlayerState(player, arena);
+        player.setInvulnerable(false);
+        player.setInvisible(false);
+        player.setAllowFlight(false);
+        player.setFlying(false);
+        setGameModeInternally(player, GameMode.SURVIVAL);
+
+        // 3. Teleport to Arena Spawn
+        Location spawn = arena.getArenaSpawn();
+        if (spawn != null && spawn.getWorld() != null) {
+            spawn.getWorld().getChunkAt(spawn).load(true);
+            player.teleport(spawn);
+        }
+
+        // 4. Re-equip class loadout
+        ArenaPlayerProfile profile = arena.getPlayerProfiles().get(uuid);
+        String targetClass = "Knight";
+        if (profile != null && profile.getSelectedClass() != null && !profile.getSelectedClass().isEmpty()) {
+            targetClass = profile.getSelectedClass();
+        }
+        if (profile != null) {
+            profile.setSelectedClass(null); // Clear temporarily so equipClass doesn't early-return
+        }
+        if (plugin.getClassManager() != null) {
+            plugin.getClassManager().equipClass(player, targetClass);
+        }
+
+        // [v8.4.2 REVIVE OVERHAUL]: Re-apply permanent Shop stats, Class HP, and 100% full health
+        if (plugin.getShopManager() != null) {
+            plugin.getShopManager().applyPermanentAttributesToPlayer(player);
+        }
+
+        double targetBaseHealth = 20.0;
+        if (arena.getConfig() != null) {
+            double classHealth = arena.getConfig().getDouble("settings.base-health-per-class." + targetClass, 0.0);
+            double arenaBaseHealth = arena.getConfig().getDouble("settings.base-health", 0.0);
+            if (classHealth > 0) targetBaseHealth = classHealth;
+            else if (arenaBaseHealth > 0) targetBaseHealth = arenaBaseHealth;
+        }
+
+        AttributeInstance hpAttr = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
+        if (hpAttr != null) {
+            double shopBonus = 0.0;
+            if (plugin.getShopManager() != null) {
+                vn.meowchan12.mobarenav2.shop.model.PlayerShopData sd = plugin.getShopManager().getPlayerData(uuid);
+                if (sd != null) {
+                    shopBonus = sd.getItemLevel("max_health_base") * 2.0;
+                }
+            }
+            hpAttr.setBaseValue(Math.max(20.0, targetBaseHealth + shopBonus));
+        }
+
+        // Re-apply Class potion effects permanently
+        if (plugin.getConfigManager() != null && plugin.getConfigManager().getClasses() != null) {
+            ConfigurationSection sec = plugin.getConfigManager().getClasses().getConfigurationSection("classes." + targetClass);
+            if (sec != null) {
+                String effStr = sec.getString("effects");
+                if (effStr != null && !effStr.isEmpty()) {
+                    for (String single : effStr.split(",")) {
+                        String[] effData = single.trim().split(":");
+                        org.bukkit.potion.PotionEffectType type = org.bukkit.Registry.POTION_EFFECT_TYPE.get(NamespacedKey.minecraft(effData[0].toLowerCase()));
+                        if (type != null) {
+                            int amp = effData.length > 1 ? Integer.parseInt(effData[1]) : 0;
+                            player.addPotionEffect(new org.bukkit.potion.PotionEffect(type, Integer.MAX_VALUE, amp, false, false, true));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Re-apply active match upgrades to restore passive tasks and bonuses
+        if (plugin.getUpgradeRegistry() != null && profile != null) {
+            for (Map.Entry<String, Integer> entry : profile.getOwnedUpgrades().entrySet()) {
+                String upId = entry.getKey();
+                int upLvl = entry.getValue();
+                if (upLvl <= 0) continue;
+                UpgradeManager.UpgradeData data = plugin.getUpgradeManager().getUpgradeData(upId);
+                if (data != null) {
+                    plugin.getUpgradeRegistry().dispatchApply(player, upLvl, data, arena);
+                }
+            }
+        }
+
+        // 100% full health restore and hunger reset
+        if (hpAttr != null) {
+            player.setHealth(hpAttr.getValue());
+        }
+        player.setFoodLevel(20);
+        player.setSaturation(20.0f);
+        player.setFireTicks(0);
+
+        // 5. 3-second invulnerability protection (Shield & VFX)
+        player.setInvulnerable(true);
+        player.sendTitle("§a§l✦ REVIVED! ✦", "§e3s Invulnerability Shield active!", 5, 40, 10);
+        try {
+            player.playSound(player.getLocation(), org.bukkit.Sound.ITEM_TOTEM_USE, 1.0f, 1.0f);
+            player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_ZOMBIE_VILLAGER_CURE, 1.0f, 1.2f);
+            player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_BEACON_ACTIVATE, 1.0f, 1.5f);
+        } catch (Throwable ignored) {}
+        try {
+            player.getWorld().spawnParticle(org.bukkit.Particle.TOTEM_OF_UNDYING, player.getLocation().add(0, 1, 0), 60, 0.5, 0.5, 0.5, 0.2);
+            player.getWorld().spawnParticle(org.bukkit.Particle.FLASH, player.getLocation().add(0, 1, 0), 2);
+        } catch (Throwable ignored) {}
+
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline() && arena.isRunning() && !arena.getSpectators().contains(uuid)) {
+                player.setInvulnerable(false);
+                player.sendMessage("§e[MobArenav2] Invulnerability shield expired! Fight on!");
+            }
+        }, 60L);
+
+        // 6. Refresh scoreboards and broadcast
+        if (profile != null && profile.getScoreboard() != null) {
+            profile.getScoreboard().update(arena);
+        }
+        for (UUID activeUuid : arena.getActivePlayers()) {
+            Player p = Bukkit.getPlayer(activeUuid);
+            if (p != null && p.isOnline()) {
+                ArenaPlayerProfile pProfile = arena.getPlayerProfiles().get(activeUuid);
+                if (pProfile != null && pProfile.getScoreboard() != null) {
+                    pProfile.getScoreboard().update(arena);
+                }
+            }
+        }
+        arena.broadcastMessage("§a§l[MobArenav2] §e" + player.getName() + " §ahas been REVIVED by an Admin and returned to the battle!");
+        return true;
     }
 }

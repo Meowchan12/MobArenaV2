@@ -9,7 +9,7 @@ category:
   id: "advanced_stats"
   display-name: "&#FFAA00&lADVANCED COMBAT STATS"
   material: DIAMOND_SWORD
-  slot: 24
+  slot: 21
   lore:
     - "&7&m---------------------"
     - "&fAdvanced combat upgrades for skilled warriors."
@@ -132,3 +132,25 @@ items:
     output-actions:
       - "message: &a[MobArena Shop] Upgraded Adamantine Skin to Level %level%!"
       - "sound: ITEM_ARMOR_EQUIP_NETHERITE 1.0 1.2"
+
+  hephaestus_license:
+    category: "advanced_stats"
+    slot: 26
+    display-name: "&#FFAA00&lHephaestus' Blessing License"
+    material: ANVIL
+    lore:
+      - "&7&m---------------------"
+      - "&fUnlocks the &6&lHephaestus' Blessing &fSuper Upgrade"
+      - "&finto your arena card draft pool!"
+      - "&fAllows mob kills to drop mystical shards that repair"
+      - "&fall worn armor and items in inventory!"
+      - "&a✔ Permanent Account Perk"
+      - "&fPrice: &e$%cost% Vault Money"
+      - "&7&m---------------------"
+    price-type: VAULT
+    base-cost: 500000.0
+    cost-multiplier: 1.0
+    max-level: 1
+    output-actions:
+      - "sound: UI_TOAST_CHALLENGE_COMPLETE 1.0 1.5"
+      - "message: &a[MobArena Shop] Unlocked Hephaestus' Blessing License! This super repair upgrade can now appear in battle!"

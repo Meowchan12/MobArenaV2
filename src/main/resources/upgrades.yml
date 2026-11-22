@@ -8,43 +8,15 @@
 # %next_value%    : Value at the next level
 # ==========================================================
 
-settings:
-  enabled: true
-  mode: "INTERVAL" # Options: "INTERVAL", "SPECIFIC_WAVES", "STAGE_BASED"
-  trigger-every: 5
-  trigger-every-waves: 5
-  specific-waves:
-    - 5
-    - 10
-    - 15
-    - 20
-    - 25
-    - 30
-  stage-triggers:
-    stage_1:
-      min-wave: 1
-      max-wave: 10
-      interval: 5
-    stage_2:
-      min-wave: 11
-      max-wave: 30
-      interval: 3
-  default-max-slots: 3
-  class-slots:
-    Knight: 3
-    Warrior: 3
-    Archer: 3
-    Alchemist: 4
-    Juggernaut: 2
-    Tank: 4
-    Mage: 2
+# Note: All upgrade triggering rules, rates, and slot limits are now centralized
+# in settings.yml under 'upgrade-system.default' and 'upgrade-system.arenas.<arena>'.
 
 upgrades:
   # ==========================================================
   # CATEGORY 1: NORMAL UPGRADES (TOP SECTION: SLOTS 0 - 26)
   # ==========================================================
 
-  # --- Nhóm Tấn Công (Góc Trái - Hàng 1) ---
+  # --- Offensive Group (Top Left - Row 1) ---
   warrior_might:
     display-name: '&#FF5555&lWarrior''s Might &8[Lv.%current_level%/%max_level%]'
     material: IRON_SWORD
@@ -52,15 +24,18 @@ upgrades:
     slot: 1
     type: DAMAGE_MULTIPLIER
     max-level: 5
-    base-value: 1.15
-    increment: 0.08
+    base-value: 20.0
+    increment: 10.0
+    cleave-percent: 45.0
+    cleave-radius: 4.5
+    cleave-milestone-level: 5
     lore:
       - '&7&m---------------------'
       - '&fInfuse your attacks with raw force.'
-      - '&fIncreases all outgoing physical damage.'
+      - '&fIncreases Melee, Bow, and Crossbow damage.'
       - '&fCurrent Bonus: &c+&e%current_value%%'
       - '&fNext Level: &c+&e%next_value%%'
-      - '&e★ Tier Milestone (Lv.5): &fShockwave cleaves nearby mobs!'
+      - '&e★ Tier Milestone (Lv.5): &fShockwave Cleaves 45% DMG in 4.5m!'
       - '&7&m---------------------'
 
   critical_strike:
@@ -72,6 +47,9 @@ upgrades:
     max-level: 5
     base-value: 12.0
     increment: 6.0
+    crit-multiplier: 2.0
+    mega-crit-multiplier: 3.0
+    mega-crit-milestone-level: 5
     lore:
       - '&7&m---------------------'
       - '&fHone your precision to strike deadly blows.'
@@ -82,24 +60,24 @@ upgrades:
       - '&7&m---------------------'
 
   adrenaline_rush:
-    display-name: '&#FFFF55&lAdrenaline Rush &8[Lv.%current_level%/%max_level%]'
+    display-name: '&#FFFF55&lFrenzy Strikes &8[Lv.%current_level%/%max_level%]'
     material: SUGAR
     weight: 45
     slot: 3
     type: HASTE_EFFECT
     max-level: 3
-    base-value: 1.0
-    increment: 1.0
+    base-value: 15.0
+    increment: 15.0
     lore:
       - '&7&m---------------------'
-      - '&fPumps adrenaline into your veins.'
-      - '&fIncreases your attack and weapon swing speed.'
-      - '&fCurrent Haste Tier: &eLv.%current_value%'
-      - '&fNext Tier: &eLv.%next_value%'
-      - '&e★ Tier Milestone (Lv.3): &fPermanent Speed I buff!'
+      - '&fAccelerates your weapon swing frequency.'
+      - '&fIncreases genuine weapon Attack Speed.'
+      - '&fAttack Speed Bonus: &e+&a%current_value%%'
+      - '&fNext Tier: &e+&a%next_value%%'
+      - '&e★ Tier Milestone (Lv.3): &f5 consecutive hits grant Speed II!'
       - '&7&m---------------------'
 
-  # --- Nhóm Phòng Thủ (Góc Phải - Hàng 1) ---
+  # --- Defensive Group (Top Right - Row 1) ---
   titan_heart:
     display-name: '&#5555FF&lTitan Heart &8[Lv.%current_level%/%max_level%]'
     material: RED_CONCRETE
@@ -109,6 +87,8 @@ upgrades:
     max-level: 5
     base-value: 4.0
     increment: 3.0
+    absorption-milestone-level: 5
+    wave-absorption: 4.0
     lore:
       - '&7&m---------------------'
       - '&fFortify your vitality with ancient titan blood.'
@@ -127,6 +107,9 @@ upgrades:
     max-level: 4
     base-value: 8.0
     increment: 6.0
+    min-damage-factor: 0.30
+    knockback-multiplier: 0.5
+    knockback-milestone-level: 4
     lore:
       - '&7&m---------------------'
       - '&fHardens your body against enemy strikes.'
@@ -151,10 +134,11 @@ upgrades:
       - '&fGrants extra Absorption HP at wave start.'
       - '&fCurrent Shield: &e%current_value% HP'
       - '&fNext Level: &e%next_value% HP'
-      - '&e★ Tier Milestone (Lv.4): &fReflects 15% projectile damage!'
+      - '&e★ Passive: &fRegenerates 50% shield every 30s!'
+      - '&e★ Tier Milestone (Lv.4): &fReduces & reflects 30% projectile damage!'
       - '&7&m---------------------'
 
-  # --- Nhóm Hồi Phục & Tốc Độ (Góc Trái - Hàng 2) ---
+  # --- Recovery & Speed Group (Bottom Left - Row 2) ---
   vampiric_strike:
     display-name: '&#FF0000&lVampiric Strike &8[Lv.%current_level%/%max_level%]'
     material: RED_DYE
@@ -162,15 +146,17 @@ upgrades:
     slot: 10
     type: LIFESTEAL
     max-level: 5
-    base-value: 15.0
-    increment: 5.0
+    base-value: 8.0
+    increment: 2.5
+    overheal-milestone-level: 3
+    max-absorption-shield: 10.0
     lore:
       - '&7&m---------------------'
       - '&fCurse your blade with vampiric thirst.'
-      - '&fSiphons 25% of Damage Dealt as HP on hit.'
+      - '&fSiphons &c8% - 16% &fof Damage Dealt as HP on hit.'
       - '&fCurrent Chance: &c%current_value%%'
       - '&fNext Level: &c%next_value%%'
-      - '&e★ Tier Milestone (Lv.3+): &fOverheal becomes Absorption Shield!'
+      - '&e★ Tier Milestone (Lv.3+): &fOverheal becomes Absorption Shield (Max 10 HP)!'
       - '&7&m---------------------'
 
   soul_harvester:
@@ -185,9 +171,10 @@ upgrades:
     lore:
       - '&7&m---------------------'
       - '&fAbsorb the essence of fallen foes.'
-      - '&fRestores HP whenever you slay a monster.'
+      - '&fRestores HP and grants &eSaturation&f on monster kill.'
       - '&fCurrent Heal: &a+%current_value% HP'
       - '&fNext Level: &a+%next_value% HP'
+      - '&e★ Boss Synergy: &fEvery 3 hits on a Boss restores 3.0 HP & Saturation!'
       - '&e★ Tier Milestone (Lv.5): &fSlaying bosses restores FULL HP!'
       - '&7&m---------------------'
 
@@ -200,16 +187,20 @@ upgrades:
     max-level: 3
     base-value: 15.0
     increment: 8.0
+    jump-boost-milestone-level: 3
+    fall-damage-immunity: true
+    dodge-chance: 12.0
+    dodge-milestone-level: 3
     lore:
       - '&7&m---------------------'
       - '&fBlesses your steps with the gale of wind.'
       - '&fIncreases your overall movement speed.'
       - '&fSpeed Bonus: &b+%current_value%%'
       - '&fNext Level: &b+%next_value%%'
-      - '&e★ Tier Milestone (Lv.3): &fGrants permanent Jump Boost I!'
+      - '&e★ Tier Milestone (Lv.3): &f+12% Dodge Chance & Fall Immunity!'
       - '&7&m---------------------'
 
-  # --- Nhóm Rủi Ro & Tiện Ích (Góc Phải - Hàng 2) ---
+  # --- Risk & Utility Group (Bottom Right - Row 2) ---
   midas_touch:
     display-name: '&#FFAA00&lMidas Touch &8[Lv.%current_level%/%max_level%]'
     material: GOLD_INGOT
@@ -236,6 +227,10 @@ upgrades:
     max-level: 3
     base-value: 25.0
     increment: 20.0
+    frenzy-milestone-level: 3
+    frenzy-hp-threshold: 0.35
+    frenzy-bonus-percent: 35.0
+    damage-penalty-percent: 15.0
     lore:
       - '&7&m---------------------'
       - '&fSacrifice safety for catastrophic power.'
@@ -243,33 +238,50 @@ upgrades:
       - '&c+15% &fmore damage from all sources!'
       - '&fCurrent DMG Boost: &c+%current_value%%'
       - '&fNext Level: &c+%next_value%%'
-      - '&e★ Tier Milestone (Lv.3): &f+50% Attack Speed bonus!'
+      - '&e★ Tier Milestone (Lv.3): &fBlood Frenzy! +100% DMG when HP < 35%!'
       - '&7&m---------------------'
 
   gamblers_dice:
-    display-name: '&#FFAA00&lGambler''s Dice &8[Consumable]'
+    display-name: '&#FFAA00&lGambler''s Dice &8[High Stakes]'
     material: KELP
-    weight: 20
+    weight: 15
     slot: 16
     type: RANDOM_EVENT
     max-level: 1
     lore:
       - '&7&m---------------------'
-      - '&fRoll the dice and challenge fate!'
-      - '&a50% Chance: &aReceive +$2000'
-      - '&c50% Chance: &cTake 5 True Damage'
+      - '&e&l★ HIGH STAKES GAMBLE ★'
+      - '&fRoll the cursed dice to challenge fate!'
+      - ' '
+      - '&a&l30% CHANCE (JACKPOT):'
+      - '&a Receive &e&l$10,000,000 &aVault Money!'
+      - '&a Server-wide announcement & fanfare!'
+      - ' '
+      - '&c&l70% CHANCE (CURSE):'
+      - '&c Suffer 50% HP True Damage!'
+      - '&c Struck by lightning & Blindness debuff!'
       - '&7&m---------------------'
     events:
-      good_luck:
-        chance: 50.0
-        command: eco give %player% 2000
-        message: '&aJACKPOT! You received $2000!'
-      bad_luck:
-        chance: 50.0
-        true-damage: 5.0
-        message: '&cOuch... The dice was cursed.'
+      jackpot:
+        chance: 30.0
+        command: eco give %player% 10000000
+        message: '&a&l🎰 [JACKPOT] &eYou challenged fate and WON &a&l$10,000,000 Vault Money&e!'
+        broadcast: '&6&l🎰 [JACKPOT] &e%player% &fchallenged fate with the Gambler''s Dice and won &a&l$10,000,000 Vault Money&f!'
+        sound: UI_TOAST_CHALLENGE_COMPLETE
+        particles: TOTEM_OF_UNDYING
+      curse:
+        chance: 70.0
+        percent-damage: 50.0
+        min-damage: 10.0
+        message: '&c&l☠ [CURSE] &cThe dice was cursed! Lost 50% HP and afflicted with Blindness!'
+        sound: ENTITY_WITCH_CELEBRATE
+        lightning: true
+        particles: LARGE_SMOKE
+        potion-effects:
+          - "BLINDNESS 80 0"
+          - "SLOWNESS 80 1"
 
-  # --- Cứu Trợ Khẩn Cấp (Căn Giữa - Hàng 3) ---
+  # --- Emergency Support (Center - Row 3) ---
   instant_heal:
     display-name: '&#55FF55&lInstant Heal &8[Consumable]'
     material: GOLDEN_APPLE
@@ -300,6 +312,7 @@ upgrades:
       - '&f& Movement Speed stacks for &e5 seconds&f.'
       - '&fCurrent Bonus: &c+&e%current_value% Stacks'
       - '&fNext Level: &c+&e%next_value% Stacks'
+      - '&e★ Boss Synergy: &fEvery 3 hits on a Boss grants 1 stack!'
       - '&e★ Tier Milestone (Lv.5): &fFire explosion on kill!'
       - '&7&m---------------------'
 
@@ -322,21 +335,24 @@ upgrades:
       - '&7&m---------------------'
 
   thorns_aura:
-    display-name: '&#FF9900&lSpike Retaliation &8[Lv.%current_level%/%max_level%]'
+    display-name: '&#FF9900&lQuill Burst &8[Lv.%current_level%/%max_level%]'
     material: CACTUS
     weight: 30
     slot: 20
     type: THORNS_AURA
     max-level: 5
-    base-value: 10.0
+    base-value: 20.0
     increment: 5.0
+    trigger-threshold: 20.0
+    radius: 4.5
+    stun-milestone-level: 5
+    stun-chance: 30.0
     lore:
       - '&7&m---------------------'
-      - '&fReflects a percentage of incoming melee damage'
-      - '&fback at your attacker.'
-      - '&fCurrent Reflection: &c%current_value%%'
-      - '&fNext Level: &c%next_value%%'
-      - '&e★ Tier Milestone (Lv.5): &f25% chance to Stun attacker!'
+      - '&fAbsorbing 20 damage detonates a burst of quills,'
+      - '&fdealing &c%current_value% - %next_value% AoE Damage&f in 4.5m'
+      - '&fand knocking back & slowing nearby foes.'
+      - '&e★ Tier Milestone (Lv.5): &f30% chance to Stun targets for 2s!'
       - '&7&m---------------------'
 
   elemental_infusion:
@@ -357,6 +373,25 @@ upgrades:
       - '&e★ Tier Milestone (Lv.5): &fLightning strikes on Crit!'
       - '&7&m---------------------'
 
+  extended_reach:
+    display-name: '&#00E5FF&lExtended Reach &8[Lv.%current_level%/%max_level%]'
+    material: TRIDENT
+    weight: 30
+    slot: 23
+    type: EXTENDED_REACH
+    max-level: 3
+    base-value: 0.4
+    increment: 0.4
+    lore:
+      - '&7&m---------------------'
+      - '&fExtends your melee combat interaction reach.'
+      - '&fStrike monsters from outside their counter-attack range!'
+      - '&fBonus Range: &b+%current_value%m &7(Default: 3.0m)'
+      - '&fNext Level: &b+%next_value%m'
+      - '&e★ Tier Milestone (Lv.3): &fLonginus Thrust! Attacks beyond 3.6m'
+      - '&fdeal &c+20% Bonus Damage&f with sonic shockwave!'
+      - '&7&m---------------------'
+
   armor_piercing:
     display-name: '&#CC0000&lArmor Shredder &8[Lv.%current_level%/%max_level%]'
     material: ANVIL
@@ -364,31 +399,145 @@ upgrades:
     slot: 25
     type: ARMOR_PIERCING
     max-level: 5
-    base-value: 8.0
-    increment: 4.0
+    base-value: 12.0
+    increment: 7.0
+    shred-base: 15.0
+    shred-increment: 7.5
+    shatter-milestone-level: 5
     lore:
       - '&7&m---------------------'
-      - '&fBypasses monster natural armor and shields.'
-      - '&fConverts physical damage into True Damage.'
-      - '&fCurrent Armor Pen: &c%current_value%%'
+      - '&fStrikes shred the target''s natural &eArmor&f.'
+      - '&fDeals bonus &cTrue Damage&f that ignores all defense!'
+      - '&fBonus True DMG: &c%current_value%% &7(Min %current_level%x3)'
+      - '&fArmor Shredded: &e-%current_value%% Armor &7(4s)'
       - '&fNext Level: &c%next_value%%'
+      - '&e★ Tier Milestone (Lv.5): &fShatters defense! Inflicts &8Weakness II&f,'
+      - '&f&bGlowing&f, and &c+20% Vulnerability&f!'
       - '&7&m---------------------'
 
   soul_orb:
-    display-name: '&#3399FF&lSoul Collector &8[Lv.%current_level%/%max_level%]'
+    display-name: '&#3399FF&lSoul Magnetism &8[Lv.%current_level%/%max_level%]'
     material: EXPERIENCE_BOTTLE
     weight: 35
     slot: 26
     type: SOUL_ORB
     max-level: 5
-    base-value: 15.0
-    increment: 10.0
+    base-value: 20.0
+    increment: 12.0
     lore:
       - '&7&m---------------------'
-      - '&fSlaying foes releases Soul Orbs on the ground.'
-      - '&fWalk over orbs to restore health and speed!'
-      - '&fDrop Chance: &b%current_value%%'
+      - '&fDefeated foes drop Souls that magnetically fly'
+      - '&ftowards you within a 12 block radius.'
+      - '&fRestores &a+4.0 HP&f, &6+2.0 Absorption&f, and &eSaturation&f!'
+      - '&fCurrent Drop Chance: &b%current_value%%'
       - '&fNext Level: &b%next_value%%'
+      - '&e★ Tier Milestone (Lv.5): &fDivine Smite every 10 souls!'
+      - '&7&m---------------------'
+
+  predator_eye:
+    display-name: '&#FF3300&lPredator''s Eye &8[Lv.%current_level%/%max_level%]'
+    material: FERMENTED_SPIDER_EYE
+    weight: 35
+    slot: -1
+    type: PREDATOR_EYE
+    max-level: 5
+    base-value: 15.0
+    increment: 7.5
+    health-threshold: 0.50
+    haste-milestone-level: 5
+    haste-duration-ticks: 80
+    lore:
+      - '&7&m---------------------'
+      - '&fStrikes exploit critical vulnerabilities on injured prey.'
+      - '&fDeals bonus damage to enemies below &c50% Max HP&f.'
+      - '&fBonus Damage: &c+%current_value%% DMG'
+      - '&fNext Level: &c+%next_value%% DMG'
+      - '&e★ Tier Milestone (Lv.5): &fMerciless Frenzy! Slaying a wounded prey'
+      - '&finstantly grants &eHaste II (+20% Attack Speed)&f for 4 seconds!'
+      - '&7&m---------------------'
+
+  alchemical_quiver:
+    display-name: '&#AA00FF&lAlchemical Quiver &8[Lv.%current_level%/%max_level%]'
+    material: SPECTRAL_ARROW
+    weight: 30
+    slot: -1
+    type: BOW_POTION_INFUSION
+    max-level: 5
+    base-value: 20.0
+    increment: 7.5
+    lore:
+      - '&7&m---------------------'
+      - '&fSpecialized archery infusion for Bows & Crossbows.'
+      - '&fArrows have a chance to inflict a random alchemical toxin:'
+      - '&2• Acid: &fCorrodes armor & inflicts Weakness II (4s)'
+      - '&c• Hellfire: &fIgnites target & creates flame burst'
+      - '&b• Frostbite: &fSlows target by 50% (Slowness III) (3s)'
+      - '&fInfusion Chance: &b%current_value%%'
+      - '&fNext Level: &b%next_value%%'
+      - '&e★ Tier Milestone (Lv.5): &fPandora''s Arrow! Long-range shots (>20m)'
+      - '&fguarantee 100% infusion of &aALL 3 TOXINS&f simultaneously!'
+      - '&7&m---------------------'
+
+  gravity_singularity:
+    display-name: '&#5500AA&lGravitational Singularity &8[Lv.%current_level%/%max_level%]'
+    material: ENDER_EYE
+    weight: 25
+    slot: -1
+    type: CROWD_CONTROL_VORTEX
+    max-level: 5
+    base-value: 12.0
+    increment: -1.0
+    lore:
+      - '&7&m---------------------'
+      - '&fAttacks trigger a localized gravitational vortex.'
+      - '&fVortex pulls all nearby monsters within 5.5 blocks'
+      - '&ftoward the epicenter over 1.5 seconds.'
+      - '&fCooldown: &e%current_value%s'
+      - '&fNext Level: &e%next_value%s'
+      - '&e★ Tier Milestone (Lv.5): &fEvent Horizon! The vortex collapses'
+      - '&fin an explosion dealing &c30.0 AoE Damage&f & slowing pulled mobs!'
+      - '&7&m---------------------'
+
+  phantom_decoy:
+    display-name: '&#FFFF55&lPhantom Decoy &8[Lv.%current_level%/%max_level%]'
+    material: ARMOR_STAND
+    weight: 25
+    slot: -1
+    type: STEALTH_TAUNT
+    max-level: 5
+    base-value: 30.0
+    increment: -3.0
+    lore:
+      - '&7&m---------------------'
+      - '&fEmergency survival technique when cornered.'
+      - '&fWhen dropping below 30% Max HP, triggers:'
+      - '&a✔ Complete Invisibility &f(2.5s) & causes foes to lose aggro.'
+      - '&e✔ Spawns an Armored Decoy &fthat taunts nearby monsters.'
+      - '&fCooldown: &e%current_value%s'
+      - '&fNext Level: &e%next_value%s'
+      - '&e★ Tier Milestone (Lv.5): &fExplosive Mirage! Decoy detonates'
+      - '&fwith a smoke bomb dealing &c40.0 AoE Damage &f& &8Blindness (4s)&f!'
+      - '&7&m---------------------'
+
+  soul_tether:
+    display-name: '&#00AAAA&lSoul Tether &8[Lv.%current_level%/%max_level%]'
+    material: LEAD
+    weight: 25
+    slot: -1
+    type: DAMAGE_SHARING_LINK
+    max-level: 5
+    base-value: 15.0
+    increment: 5.0
+    lore:
+      - '&7&m---------------------'
+      - '&fStrikes have a chance to tether the struck foe'
+      - '&fto 1-2 nearest monsters using soul fire chains (6s).'
+      - '&fDamage to any tethered foe is shared with linked targets!'
+      - '&fTether Proc Chance: &b%current_value%%'
+      - '&fDamage Shared: &e%current_value%% + 15%'
+      - '&fNext Level: &b%next_value%%'
+      - '&e★ Tier Milestone (Lv.5): &fFate Bond! When a tethered foe dies,'
+      - '&fit explodes dealing &c25.0 True DMG &fsplit among linked survivors!'
       - '&7&m---------------------'
 
   # ==========================================================
@@ -408,9 +557,10 @@ upgrades:
     lore:
       - '&7&m---------------------'
       - '&e&lLEGENDARY SUPER ITEM!'
-      - '&fInstantly executes non-boss monsters'
-      - '&fwhen their health drops below &c15%&f.'
-      - '&fExecuted foes explode, dealing AoE damage!'
+      - '&fInstantly executes &call monsters & bosses'
+      - '&fwhen their health drops below &c15%&f!'
+      - '&fNormal mobs explode in an AoE blast.'
+      - '&fBoss execution unleashes death thunder & alerts all!'
       - '&7&m---------------------'
 
   super_aegis:
@@ -420,12 +570,39 @@ upgrades:
     slot: 39
     type: SUPER_REVIVE
     max-level: 1
+    passive-reduction-percent: 20.0
+    cooldown-seconds: 90.0
+    invulnerability-seconds: 6.0
+    shockwave-damage: 150.0
+    shockwave-radius: 10.0
     lore:
       - '&7&m---------------------'
       - '&e&lLEGENDARY SUPER ITEM!'
-      - '&fPrevents fatal damage &aONCE&f per match.'
-      - '&fUpon triggering: Grants &bInvulnerability&f for 5s'
-      - '&fand knocks back surrounding enemies!'
+      - '&fPassive: &a-20% Damage Taken &f& &6+8.0 Absorption Shield&f.'
+      - '&fUpon Fatal Damage: Prevents death, restores &a100% HP&f!'
+      - '&fGrants &b6s Invulnerability&f, &eSaturation&f, &aRegen V&f.'
+      - '&fReleases a &6Divine Shockwave (10m)&f dealing &c150 True DMG&f'
+      - '&fand stunning surrounding enemies!'
+      - '&e★ Rechargeable: &fShield recharges automatically every &e90s&f!'
+      - '&7&m---------------------'
+
+  super_slaughterhouse:
+    display-name: '&#FF0055&l★ SUPER: Slaughterhouse Engine ★'
+    material: NETHERITE_SWORD
+    weight: 3
+    slot: 40
+    type: SUPER_KILL_SCALING
+    max-level: 1
+    percent-per-kill: 1.0
+    boss-hits-per-percent: 20
+    max-damage-cap-percent: 0.0
+    lore:
+      - '&7&m---------------------'
+      - '&e&lLEGENDARY SUPER ITEM!'
+      - '&fEach kill permanently grants &c+1% Damage&f.'
+      - '&fEvery 20 hits on a Boss grants &c+1% Damage&f.'
+      - '&fScaling Cap: &a&lUNLIMITED (No Damage Cap)&f!'
+      - '&fInfinite physical damage scaling for late-game & endless waves.'
       - '&7&m---------------------'
 
   super_overclock:
@@ -451,13 +628,188 @@ upgrades:
     slot: 42
     type: SUPER_AUTO_STRIKE
     max-level: 1
-    interval: 10
-    damage: 35.0
-    radius: 6.0
+    interval: 5
+    damage: 75.0
+    radius: 18.0
+    max-targets: 6
+    percent-hp: 20.0
+    boss-damage-cap: 600.0
     lore:
       - '&7&m---------------------'
       - '&e&lLEGENDARY SUPER ITEM!'
-      - '&fAutomatically triggers a orbital strike'
-      - '&fat the densest group of mobs every &e10s&f!'
-      - '&fDeals massive &c35.0 AoE Damage&f.'
+      - '&fCalls down orbital strikes on up to &e6 priority targets &fevery &e5s&f!'
+      - '&fDetection Range: &e18.0 Blocks &faround the player.'
+      - '&fDamage: &c75.0 True DMG &f+ &c20% Max HP True DMG&f!'
+      - '&7(Boss True DMG bonus capped at +600.0, up to 675.0 total)'
+      - '&fInflicts &8Slowness II (4s) &fand &7Weakness II (4s)&f on hit.'
+      - '&7&m---------------------'
+
+  super_retribution:
+    display-name: '&#FFAA00&l★ SUPER: Mirror of Retribution ★'
+    material: SHIELD
+    weight: 3
+    slot: 43
+    type: SUPER_TRUE_REFLECT
+    max-level: 1
+    normal-reflect-percent: 80.0
+    low-hp-reflect-percent: 150.0
+    low-hp-threshold: 0.50
+    shield-conversion-percent: 15.0
+    lore:
+      - '&7&m---------------------'
+      - '&e&lLEGENDARY SUPER ITEM!'
+      - '&fReflects &e80% True Damage &fback at attackers.'
+      - '&c★ Martyrdom (HP < 50%): &fReflects &c&l150% True Damage&f,'
+      - '&frestores &b15% Absorption Shield&f, and stuns attackers!'
+      - '&7&m---------------------'
+
+  super_hephaestus:
+    display-name: '&#FFAA00&l✦ SUPER: Hephaestus'' Blessing ✦'
+    material: ANVIL
+    weight: 3
+    slot: 44
+    type: HEPHAESTUS_BLESSING
+    max-level: 5
+    base-value: 2.0
+    increment: 7.0
+    lore:
+      - '&7&m---------------------'
+      - '&e&lMYTHIC SUPER ITEM!'
+      - '&fRequires Hephaestus License from Shop to appear.'
+      - '&fMonster kills drop mystical anvil shards that'
+      - '&fautomatically fly to you and restore durability!'
+      - '&fRepair Trigger Chance: &a%current_value%% &7(Next: &e%next_value%%&7)'
+      - '&6✔ Full Repair: &fRestores all worn armor, weapons, & inventory!'
+      - '&7&m---------------------'
+
+  # ==========================================================
+  # [v8.3.0] CATEGORY 3: ULTIMATE FUSION UPGRADES (Weight 0 - Fusion Exclusive)
+  # ==========================================================
+  ultimate_blood_god_feast:
+    display-name: '&#AA0000&l✦ [ULTIMATE] Blood God''s Feast ✦'
+    material: NETHERITE_SWORD
+    weight: 0
+    type: ULTIMATE_BLOOD_GOD_FEAST
+    max-level: 1
+    lore:
+      - '&7&m---------------------'
+      - '&c&lULTIMATE FUSION CARD'
+      - '&fMerged from: &eVampiric Strike &f+ &eSlaughterhouse Engine'
+      - '&a✔ 25% True Lifesteal on all strikes (No Cap).'
+      - '&a✔ Inherits 100% Slaughterhouse kills & boss stacking!'
+      - '&a✔ Slaying mobs summons a Blood Vortex.'
+      - '&b✔ Frees +1 Upgrade Slot upon fusion!'
+      - '&7&m---------------------'
+
+  ultimate_longinus_cleave:
+    display-name: '&#00FFAA&l✦ [ULTIMATE] Longinus Cleave ✦'
+    material: TRIDENT
+    weight: 0
+    type: ULTIMATE_LONGINUS_CLEAVE
+    max-level: 1
+    lore:
+      - '&7&m---------------------'
+      - '&c&lULTIMATE FUSION CARD'
+      - '&fMerged from: &eExtended Reach &f+ &eWarrior''s Might'
+      - '&a✔ +1.8m interaction attack reach.'
+      - '&a✔ 360° Sweeping Cleave (5m) dealing 100% full weapon damage.'
+      - '&b✔ Frees +1 Upgrade Slot upon fusion!'
+      - '&7&m---------------------'
+
+  ultimate_citadel_retribution:
+    display-name: '&#55FF55&l✦ [ULTIMATE] Citadel of Retribution ✦'
+    material: SHIELD
+    weight: 0
+    type: ULTIMATE_CITADEL_RETRIBUTION
+    max-level: 1
+    lore:
+      - '&7&m---------------------'
+      - '&c&lULTIMATE FUSION CARD'
+      - '&fMerged from: &eSuper Aegis &f+ &eThorns Aura'
+      - '&a✔ Blocks 100% of fatal damage (2s Invulnerability).'
+      - '&a✔ Reflects 150% of damage taken as AoE True Damage (8m).'
+      - '&a✔ Stuns attacking enemies for 1.5s.'
+      - '&b✔ Frees +1 Upgrade Slot upon fusion!'
+      - '&7&m---------------------'
+
+  ultimate_death_scythe:
+    display-name: '&#FF0055&l✦ [ULTIMATE] Death Scythe ✦'
+    material: NETHERITE_HOE
+    weight: 0
+    type: ULTIMATE_DEATH_SCYTHE
+    max-level: 1
+    lore:
+      - '&7&m---------------------'
+      - '&c&lULTIMATE FUSION CARD'
+      - '&fMerged from: &eSuper Executioner &f+ &eCritical Strike'
+      - '&a✔ Instantly executes mobs & bosses below 20% Health!'
+      - '&a✔ Critical strikes deal 350% total damage + Death Nova.'
+      - '&b✔ Frees +1 Upgrade Slot upon fusion!'
+      - '&7&m---------------------'
+
+  ultimate_adamantine_colossus:
+    display-name: '&#FFAA00&l✦ [ULTIMATE] Adamantine Colossus ✦'
+    material: NETHERITE_CHESTPLATE
+    weight: 0
+    type: ULTIMATE_ADAMANTINE_COLOSSUS
+    max-level: 1
+    lore:
+      - '&7&m---------------------'
+      - '&c&lULTIMATE FUSION CARD'
+      - '&fMerged from: &eTitan Heart &f+ &eIron Skin'
+      - '&a✔ +40 Permanent Max Health in match.'
+      - '&a✔ 35% Flat Damage Mitigation from all sources.'
+      - '&a✔ 100% Knockback Resistance.'
+      - '&b✔ Frees +1 Upgrade Slot upon fusion!'
+      - '&7&m---------------------'
+
+  ultimate_godspeed_tempest:
+    display-name: '&#FFFF55&l✦ [ULTIMATE] Godspeed Tempest ✦'
+    material: FEATHER
+    weight: 0
+    type: ULTIMATE_GODSPEED_TEMPEST
+    max-level: 1
+    lore:
+      - '&7&m---------------------'
+      - '&c&lULTIMATE FUSION CARD'
+      - '&fMerged from: &eSwift Wind &f+ &eAdrenaline Rush'
+      - '&a✔ +60% Permanent Movement Speed boost.'
+      - '&a✔ Below 40% HP: Triggers Godspeed Mode (Speed IV + i-frames).'
+      - '&b✔ Frees +1 Upgrade Slot upon fusion!'
+      - '&7&m---------------------'
+
+  ultimate_golden_necromancer:
+    display-name: '&#FFD700&l✦ [ULTIMATE] Golden Necromancer ✦'
+    material: GOLD_BLOCK
+    weight: 0
+    type: ULTIMATE_GOLDEN_NECROMANCER
+    max-level: 1
+    lore:
+      - '&7&m---------------------'
+      - '&c&lULTIMATE FUSION CARD'
+      - '&fMerged from: &eSoul Harvester &f+ &eMidas Touch'
+      - '&a✔ Harvested souls grant +2% damage & drop +$500 cash.'
+      - '&a✔ 30% chance on kill to summon Golden Skeletons.'
+      - '&b✔ Frees +1 Upgrade Slot upon fusion!'
+      - '&7&m---------------------'
+
+  ultimate_celestial_cataclysm:
+    display-name: '&#FF55FF&l✦ [ULTIMATE] Celestial Cataclysm ✦'
+    material: NETHER_STAR
+    weight: 0
+    type: ULTIMATE_CELESTIAL_CATACLYSM
+    max-level: 1
+    interval: 5
+    damage: 80.0
+    radius: 28.0
+    max-targets: 8
+    percent-hp: 20.0
+    boss-damage-cap: 600.0
+    lore:
+      - '&7&m---------------------'
+      - '&c&lULTIMATE FUSION CARD'
+      - '&fMerged from: &eSuper Nova &f+ &eElemental Infusion'
+      - '&a✔ Calls down Celestial Meteors on up to 8 priority targets every 5s.'
+      - '&a✔ Meteor impacts and basic attacks unleash Chain Lightning.'
+      - '&b✔ Frees +1 Upgrade Slot upon fusion!'
       - '&7&m---------------------'

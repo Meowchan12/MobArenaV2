@@ -158,7 +158,10 @@ public class ClassManager {
         Arena arena = plugin.getArenaManager().getArenaByPlayer(player);
         if (arena == null) return false;
 
-        if (!isClassAllowedInArena(className, arena)) {
+        boolean isAdminBypass = player.hasPermission("mobarenav2.bypass.class") || player.hasPermission("mobarenav2.admin");
+
+        boolean mapRestricted = !isClassAllowedInArena(className, arena);
+        if (mapRestricted && !isAdminBypass) {
             player.sendMessage("§c[MobArenav2] The " + className + " class is restricted and cannot be used in this arena!");
             return false;
         }
@@ -166,18 +169,21 @@ public class ClassManager {
         ArenaPlayerProfile profile = arena.getPlayerProfiles().get(player.getUniqueId());
 
         int limit = getClassLimit(className);
-        if (limit != -1) {
-            int current = getPlayersInClass(arena, className);
+        int current = getPlayersInClass(arena, className);
+        boolean isFull = (limit != -1 && current >= limit);
 
-            if (profile != null && className.equalsIgnoreCase(profile.getSelectedClass())) {
-                player.sendMessage("§e[MobArenav2] You have already equipped the " + className + " class!");
-                return true;
-            }
+        if (profile != null && className.equalsIgnoreCase(profile.getSelectedClass())) {
+            player.sendMessage("§e[MobArenav2] You have already equipped the " + className + " class!");
+            return true;
+        }
 
-            if (current >= limit) {
-                player.sendMessage("§c[MobArenav2] The " + className + " class is currently FULL (" + current + "/" + limit + ")!");
-                return false;
-            }
+        if (isFull && !isAdminBypass) {
+            player.sendMessage("§c[MobArenav2] The " + className + " class is currently FULL (" + current + "/" + limit + ")!");
+            return false;
+        }
+
+        if (isAdminBypass && (mapRestricted || isFull)) {
+            player.sendMessage("§d§l[ADMIN BYPASS] §eEquipped class §b" + className + " §edespite restrictions/limits for testing.");
         }
 
         ConfigurationSection section = plugin.getConfigManager().getClasses().getConfigurationSection("classes." + className);

@@ -1,0 +1,1167 @@
+# ========================================================================
+# MOB ARENA V2 - STAGE 3 ARENA CONFIGURATION
+# ------------------------------------------------------------------------
+# [v8.3.2 REBALANCED & OVERHAULED]:
+# - Rebalanced mob counts from early game to end game (scaled down drastically).
+# - Tuned for 1-4 players: No more 200+ mob spam on 2-player sessions!
+# - Integrated all 22 tactical raid bosses from v8.3.0 & v8.3.1.
+# - Integrated high-priority Support Witches (Healer Witch & War Witch).
+# - 100% English language compliance.
+# ========================================================================
+
+# ==========================================
+# AREA 1: GENERAL SETTINGS
+# ==========================================
+name: default
+settings:
+  enabled: true
+  required-arena: stage2
+
+  base-health: 60.0
+  base-health-per-class:
+    finallaw: 80.0
+    Alchemist: 90.0
+
+  # [v8.4.0 CENTRALIZED]: Upgrade system settings (intervals, slots, draft rates)
+  # are now centrally managed in settings.yml under 'upgrade-system.arenas.stage3'
+  # (auto-generated from 'upgrade-system.default' when loaded).
+
+  # Final wave of normal game. Voting Phase for Endless Mode triggers after Wave 100.
+  max-waves: 100
+
+  # Economy integration (Requires Vault)
+  entry-fee:
+    enabled: false
+    type: VAULT
+    amount: 100.0
+
+  rules:
+    mob-drop: false
+    player-pvp: false
+    block-break: true
+    block-place: true
+    item-drop: true
+    allow-commands: false
+    command-whitelist:
+    - /ma leave
+    - /ma class
+
+  wave-conditions:
+    clear-mob-before-next-wave: true
+    clear-boss-before-next-wave: true
+    next-wave: 6.0
+
+  # ----------------------------------------
+  # CONFIGURABLE ANNOUNCER
+  # ----------------------------------------
+  announcer:
+    announce-when-arena-ends: true
+    messages:
+      victory:
+      - '&e=========================================='
+      - '&a&lVICTORY! &fArena &e%arena% &fhas been cleared!'
+      - '&7Reached Wave: &b%wave%&7/&b%max_wave%'
+      - ''
+      - '&e&lTOP MVPs:'
+      - ' &61. &f%top1_player% &7- &c%top1_kills% Kills &8(%top1_class%)'
+      - ' &62. &f%top2_player% &7- &c%top2_kills% Kills &8(%top2_class%)'
+      - ' &63. &f%top3_player% &7- &c%top3_kills% Kills &8(%top3_class%)'
+      - '&e=========================================='
+      defeat:
+      - '&e=========================================='
+      - '&c&lMATCH OVER! &fArena &e%arena%'
+      - '&7Reached Wave: &b%wave%'
+      - ''
+      - '&e&lTOP MVPs:'
+      - ' &61. &f%top1_player% &7- &c%top1_kills% Kills &8(%top1_class%)'
+      - ' &62. &f%top2_player% &7- &c%top2_kills% Kills &8(%top2_class%)'
+      - ' &63. &f%top3_player% &7- &c%top3_kills% Kills &8(%top3_class%)'
+      - '&e=========================================='
+
+  # ----------------------------------------
+  # HARDCORE MECHANICS: ORBITAL STRIKE
+  # ----------------------------------------
+  hardcore-mechanics:
+    lightning-strike:
+      enabled: true
+      interval: 15 # Triggers every 15 seconds
+      strikes-per-wave:
+        min: 1
+        max: 3
+      damage:
+        min: 8.0
+        max: 20.0
+        radius: 5.0
+      phases:
+        silent-aim: 1.0
+        tracking-min: 1.0
+        tracking-max: 2.0
+        lock-on: 0.5
+
+# ==========================================
+# AREA 2: MAP COORDINATES
+# ==========================================
+coords:
+  p1: 1388.0,-41.0,-1537.0,0.0,0.0,finalstage3
+  p2: 1590.0,23.0,-1320.0,0.0,0.0,finalstage3
+  lobby: 53.20427783118309,3.621442884730549,47.648758134827936,-98.24928,62.011536,finalstage3
+  arena: 1483.185269290207,-32.0,-1424.5598151057993,-159.14886,61.088852,finalstage3
+  spectator: 1486.0831084433594,25.0,-1425.4744392703135,-90.25256,33.71559,finalstage3
+  spawnpoints:
+    '1': 1483.5,-32.0,-1357.5,0.0,0.0,finalstage3
+    '2': 1475.5,-32.0,-1369.5,0.0,0.0,finalstage3
+    '3': 1488.5,-32.0,-1370.5,0.0,0.0,finalstage3
+    '4': 1500.5,-32.0,-1375.5,0.0,0.0,finalstage3
+    '5': 1506.5,-32.0,-1377.5,0.0,0.0,finalstage3
+    '6': 1512.5,-32.0,-1381.5,0.0,0.0,finalstage3
+    '7': 1522.5,-32.0,-1390.5,0.0,0.0,finalstage3
+    '8': 1526.5,-32.0,-1394.5,0.0,0.0,finalstage3
+    '9': 1532.5,-32.0,-1401.5,0.0,0.0,finalstage3
+    '10': 1535.5,-32.0,-1415.5,0.0,0.0,finalstage3
+    '11': 1538.5,-32.0,-1420.5,0.0,0.0,finalstage3
+    '12': 1540.5,-32.0,-1428.5,0.0,0.0,finalstage3
+    '13': 1534.5,-32.0,-1440.5,0.0,0.0,finalstage3
+    '14': 1534.5,-32.0,-1445.5,0.0,0.0,finalstage3
+    '15': 1531.5,-32.0,-1460.5,0.0,0.0,finalstage3
+    '16': 1517.5,-32.0,-1463.5,0.0,0.0,finalstage3
+    '17': 1517.5,-32.0,-1471.5,0.0,0.0,finalstage3
+    '18': 1504.5,-32.0,-1478.5,0.0,0.0,finalstage3
+    '19': 1491.5,-32.0,-1474.5,0.0,0.0,finalstage3
+    '20': 1484.5,-32.0,-1480.5,0.0,0.0,finalstage3
+    '21': 1472.5,-32.0,-1482.5,0.0,0.0,finalstage3
+    '22': 1466.5,-32.0,-1476.5,0.0,0.0,finalstage3
+    '23': 1461.5,-32.0,-1475.5,0.0,0.0,finalstage3
+    '24': 1445.5,-32.0,-1472.5,0.0,0.0,finalstage3
+    '25': 1444.5,-32.0,-1460.5,0.0,0.0,finalstage3
+    '26': 1440.5,-32.0,-1457.5,0.0,0.0,finalstage3
+    '27': 1429.5,-32.0,-1445.5,0.0,0.0,finalstage3
+    '28': 1431.5,-32.0,-1433.5,0.0,0.0,finalstage3
+    '29': 1426.5,-32.0,-1426.5,0.0,0.0,finalstage3
+    '30': 1425.5,-32.0,-1415.5,0.0,0.0,finalstage3
+    '31': 1431.5,-32.0,-1408.5,0.0,0.0,finalstage3
+    '32': 1433.5,-32.0,-1402.5,0.0,0.0,finalstage3
+    '33': 1432.5,-32.0,-1392.5,0.0,0.0,finalstage3
+    '34': 1448.5,-32.0,-1385.5,0.0,0.0,finalstage3
+    '35': 1451.5,-32.0,-1380.5,0.0,0.0,finalstage3
+    '36': 1461.5,-32.0,-1372.5,0.0,0.0,finalstage3
+  supplypoints:
+    '1': 1467.5,-32.0,-1452.5,0.0,0.0,finalstage3
+    '2': 1483.5,-32.0,-1457.5,0.0,0.0,finalstage3
+    '3': 1499.5,-32.0,-1453.5,0.0,0.0,finalstage3
+    '4': 1520.5,-32.0,-1440.5,0.0,0.0,finalstage3
+    '5': 1525.5,-32.0,-1420.5,0.0,0.0,finalstage3
+    '6': 1513.5,-32.0,-1403.5,0.0,0.0,finalstage3
+    '7': 1495.5,-32.0,-1389.5,0.0,0.0,finalstage3
+    '8': 1475.5,-32.0,-1380.5,0.0,0.0,finalstage3
+
+# ==========================================
+# AREA 3: REWARDS SYSTEM
+# ==========================================
+rewards:
+  every 1 normal:
+  - vault:600000.0
+  every 5 normal:
+  - vault:2000000.0
+  every 10 normal:
+  - vault:3000000.0
+  '85':
+  - vault:8000000.0
+  every 3 endless:
+  - 'after-game: true'
+  - vault:2000000.0
+
+# ==========================================
+# AREA 4: REBALANCED SMART WAVES
+# ==========================================
+# Total 100 Waves divided into 12 Tactical Acts, 10 Epic Boss Waves,
+# 10 Supply Drop Waves, 10 Swarm Incursions, and Modular Endless Mode (Wave 101+).
+#
+# Mob counts are strictly controlled (8-34 base mobs) to maintain optimal TPS
+# and prevent excessive mob clutter during multi-player runs.
+# ==========================================
+
+waves:
+  # ========================================================================
+  # [CATEGORY 1]: SUPPLY DROPS (Priority 1) - Restock & Lifeline
+  # ========================================================================
+  supply_drop_15:
+    waves: 10
+    priority: 1
+    wave_types: supply
+    supply-id: supply15
+    duration: 30.0
+
+  supply_drop_16:
+    waves: 20
+    priority: 1
+    wave_types: supply
+    supply-id: supply16
+    duration: 30.0
+
+  supply_drop_17:
+    waves: 30
+    priority: 1
+    wave_types: supply
+    supply-id: supply17
+    duration: 30.0
+
+  supply_drop_18:
+    waves: 40
+    priority: 1
+    wave_types: supply
+    supply-id: supply18
+    duration: 30.0
+
+  supply_drop_19:
+    waves: 50
+    priority: 1
+    wave_types: supply
+    supply-id: supply19
+    duration: 30.0
+
+  supply_drop_20:
+    waves: 60
+    priority: 1
+    wave_types: supply
+    supply-id: supply20
+    duration: 30.0
+
+  supply_drop_21:
+    waves: 70
+    priority: 1
+    wave_types: supply
+    supply-id: supply21
+    duration: 30.0
+
+  supply_drop_22:
+    waves: 80
+    priority: 1
+    wave_types: supply
+    supply-id: supply22
+    duration: 30.0
+
+  supply_drop_23:
+    waves: 90
+    priority: 1
+    wave_types: supply
+    supply-id: supply23
+    duration: 30.0
+
+  supply_drop_24:
+    waves: 99
+    priority: 1
+    wave_types: supply
+    supply-id: supply24
+    duration: 40.0
+
+  # ========================================================================
+  # [CATEGORY 2]: BOSS ENCOUNTERS (Priority 1) - Multi-Phase & Tactical Raids
+  # Featuring all 22 bosses and support witch escorts.
+  # ========================================================================
+  boss_stage3_wave15:
+    waves: 15
+    priority: 1
+    wave_types: boss
+    mobs:
+      titan_of_the_depths: 1
+      iron_behemoth: 1
+      wither_skeleton:
+        amount: 4
+        equip:
+        - netherite_sword:1 sharpness:8;knockback:2 %100
+        - diamond_chestplate:1 protection:6 %100
+      cave_spider: 4
+      healer_witch: 1
+
+  boss_stage3_wave25:
+    waves: 25
+    priority: 1
+    wave_types: boss
+    mobs:
+      stormpiercer: 1
+      frostbite_archer: 1
+      stray:
+        amount: 6
+        equip:
+        - bow:1 power:8;punch:3 %100
+        - diamond_chestplate:1 protection:6 %100
+      breeze: 2
+      buffer_witch: 1
+
+  boss_stage3_wave35:
+    waves: 35
+    priority: 1
+    wave_types: boss
+    mobs:
+      dread_colossus: 1
+      ironclad_vanguard: 1
+      ravager: 2
+      vindicator:
+        amount: 5
+        equip:
+        - diamond_axe:1 sharpness:8;knockback:2 %100
+        - diamond_chestplate:1 protection:7 %100
+      healer_witch: 1
+
+  boss_stage3_wave45:
+    waves: 45
+    priority: 1
+    wave_types: boss
+    mobs:
+      void_weaver: 1
+      eclipse_huntsman: 1
+      cave_spider: 6
+      enderman: 4
+      buffer_witch: 1
+
+  boss_stage3_wave55:
+    waves: 55
+    priority: 1
+    wave_types: boss
+    mobs:
+      frostmourne_specter: 1
+      venomous_goliath: 1
+      stray:
+        amount: 5
+        equip:
+        - bow:1 power:9;punch:3 %100
+        - netherite_chestplate:1 protection:8 %100
+      breeze: 2
+      wither_skeleton: 4
+      healer_witch: 1
+
+  boss_stage3_wave65:
+    waves: 65
+    priority: 1
+    wave_types: boss
+    mobs:
+      infernal_warlord: 1
+      crimson_conjurer: 1
+      piglin_brute:
+        amount: 6
+        equip:
+        - netherite_axe:1 sharpness:10;fire_aspect:3;knockback:3 %100
+        - netherite_chestplate:1 protection:8;thorns:4 %100
+      blaze: 4
+      magma_cube: 3
+      buffer_witch: 1
+
+  boss_stage3_wave75:
+    waves: 75
+    priority: 1
+    wave_types: boss
+    mobs:
+      chaos_archon: 1
+      abyssal_warlord: 1
+      enderman: 5
+      phantom: 4
+      evoker: 2
+      healer_witch: 1
+      buffer_witch: 1
+
+  boss_stage3_wave85:
+    waves: 85
+    priority: 1
+    wave_types: boss
+    mobs:
+      harbinger_of_doom: 1
+      destroyer: 1
+      warden: 1
+      wither_skeleton:
+        amount: 6
+        equip:
+        - netherite_sword:1 sharpness:12;fire_aspect:4;knockback:3 %100
+        - netherite_chestplate:1 protection:10;thorns:5 %100
+      bogged: 4
+      healer_witch: 1
+      buffer_witch: 1
+
+  boss_stage3_wave95:
+    waves: 95
+    priority: 1
+    wave_types: boss
+    mobs:
+      incarnation_of_the_radius: 1
+      infernal_warlord: 1
+      frostmourne_specter: 1
+      piglin_brute:
+        amount: 6
+        equip:
+        - netherite_axe:1 sharpness:12;knockback:4 %100
+        - netherite_chestplate:1 protection:10;thorns:5 %100
+      wither_skeleton:
+        amount: 6
+        equip:
+        - netherite_sword:1 sharpness:12;fire_aspect:4 %100
+        - netherite_chestplate:1 protection:10 %100
+      ravager: 2
+      healer_witch: 1
+      buffer_witch: 1
+
+  boss_stage3_wave100:
+    waves: 100
+    priority: 1
+    wave_types: boss
+    mobs:
+      the_fallen_king: 1
+      abyssal_warlordwither: 1
+      warden: 2
+      piglin_brute:
+        amount: 6
+        equip:
+        - netherite_axe:1 sharpness:15;fire_aspect:4;knockback:4 %100
+        - netherite_chestplate:1 protection:12;thorns:6 %100
+        - netherite_helmet:1 protection:10 %100
+      wither_skeleton:
+        amount: 6
+        equip:
+        - netherite_sword:1 sharpness:15;fire_aspect:5;knockback:4 %100
+        - netherite_chestplate:1 protection:12;thorns:6 %100
+        - netherite_boots:1 protection:10 %100
+      healer_witch: 1
+      buffer_witch: 1
+
+  # ========================================================================
+  # [CATEGORY 3]: SWARM INCURSIONS (Priority 2) - Fast-Paced High Threat
+  # Rebalanced: 1.15-1.25x multiplier with base 18-26 mobs (max 25-40 mobs).
+  # ========================================================================
+  swarm_wave_8:
+    waves: 8
+    priority: 2
+    wave_types: swarm
+    mob-multiplier: 1.15
+    maxhp-bonus: x1.8
+    damage-bonus: x2.0
+    general-effect: speed:1
+    mobs:
+      cave_spider: 10
+      silverfish: 10
+      slime: 4
+
+  swarm_wave_18:
+    waves: 18
+    priority: 2
+    wave_types: swarm
+    mob-multiplier: 1.15
+    maxhp-bonus: x2.5
+    damage-bonus: x2.8
+    general-effect: speed:1, jump_boost:1
+    mobs:
+      breeze: 4
+      stray: 8
+      bogged: 6
+      slime: 4
+      buffer_witch: 1
+
+  swarm_wave_28:
+    waves: 28
+    priority: 2
+    wave_types: swarm
+    mob-multiplier: 1.20
+    maxhp-bonus: x3.5
+    damage-bonus: x3.8
+    general-effect: speed:1, resistance:1
+    mobs:
+      zoglin: 7
+      vindicator: 8
+      magma_cube: 6
+      ravager: 1
+      healer_witch: 1
+
+  swarm_wave_38:
+    waves: 38
+    priority: 2
+    wave_types: swarm
+    mob-multiplier: 1.20
+    maxhp-bonus: x4.5
+    damage-bonus: x4.5
+    general-effect: speed:1, fire_resistance:1
+    mobs:
+      blaze: 8
+      magma_cube: 6
+      wither_skeleton: 6
+      piglin_brute: 4
+      buffer_witch: 1
+
+  swarm_wave_48:
+    waves: 48
+    priority: 2
+    wave_types: swarm
+    mob-multiplier: 1.20
+    maxhp-bonus: x5.5
+    damage-bonus: x5.5
+    general-effect: speed:1, resistance:1
+    mobs:
+      enderman: 7
+      phantom: 6
+      endermite: 8
+      witch: 2
+      healer_witch: 1
+      buffer_witch: 1
+
+  swarm_wave_58:
+    waves: 58
+    priority: 2
+    wave_types: swarm
+    mob-multiplier: 1.25
+    maxhp-bonus: x6.5
+    damage-bonus: x6.5
+    general-effect: speed:1, resistance:1
+    mobs:
+      cave_spider: 10
+      silverfish: 10
+      slime: 4
+      magma_cube: 4
+      healer_witch: 1
+      buffer_witch: 1
+
+  swarm_wave_68:
+    waves: 68
+    priority: 2
+    wave_types: swarm
+    mob-multiplier: 1.25
+    maxhp-bonus: x7.5
+    damage-bonus: x7.5
+    general-effect: speed:1, resistance:2
+    mobs:
+      creeper:
+        amount: 6
+        explosion-damage: x4.5
+        effect: glowing:1, speed:1
+      vindicator: 8
+      pillager: 6
+      ravager: 2
+      buffer_witch: 1
+
+  swarm_wave_78:
+    waves: 78
+    priority: 2
+    wave_types: swarm
+    mob-multiplier: 1.25
+    maxhp-bonus: x8.5
+    damage-bonus: x8.0
+    general-effect: speed:1, strength:1, fire_resistance:1
+    mobs:
+      blaze: 8
+      ghast: 2
+      magma_cube: 6
+      piglin_brute: 5
+      healer_witch: 1
+      buffer_witch: 1
+
+  swarm_wave_88:
+    waves: 88
+    priority: 2
+    wave_types: swarm
+    mob-multiplier: 1.25
+    maxhp-bonus: x9.5
+    damage-bonus: x9.0
+    general-effect: speed:1, resistance:2
+    mobs:
+      wither_skeleton: 8
+      stray: 6
+      breeze: 3
+      silverfish: 8
+      healer_witch: 1
+      buffer_witch: 1
+
+  swarm_wave_97:
+    waves: 97
+    priority: 2
+    wave_types: swarm
+    mob-multiplier: 1.25
+    maxhp-bonus: x11.0
+    damage-bonus: x10.0
+    general-effect: speed:1, resistance:2, strength:1
+    mobs:
+      piglin_brute: 6
+      wither_skeleton: 6
+      creeper:
+        amount: 6
+        explosion-damage: x6.0
+        effect: glowing:1, speed:1
+      ravager: 2
+      evoker: 2
+      bogged: 6
+      healer_witch: 1
+      buffer_witch: 1
+
+  # ========================================================================
+  # [CATEGORY 4]: THE 12 ACTS (Priority 3) - Rapid Pacing & Tactical Gear
+  # Base mob counts tightly controlled between 8 and 34 mobs.
+  # ========================================================================
+
+  # --- ACT 1: OUTSKIRTS ASSAULT (Waves 1-4) | 10 Mobs ---
+  act_1_outskirts:
+    waves: 1-4
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x1.3
+    damage-bonus: x1.6
+    mobs:
+      zombie:
+        amount: 3
+        equip:
+        - iron_sword:1 sharpness:4;knockback:1 %100
+        - chainmail_chestplate:1 protection:3 %100
+        - iron_helmet:1 protection:2 %100
+      skeleton:
+        amount: 3
+        equip:
+        - bow:1 power:4;punch:1 %100
+        - chainmail_helmet:1 protection:3 %100
+      spider: 2
+      silverfish: 2
+
+  # --- ACT 2: FOGGY FOREST AMBUSH (Waves 5-7) | 14 Mobs ---
+  act_2_forest:
+    waves: 5-7
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x1.8
+    damage-bonus: x2.0
+    general-effect: speed:1
+    mobs:
+      zombie:
+        amount: 4
+        equip:
+        - iron_sword:1 sharpness:5;fire_aspect:1 %100
+        - iron_chestplate:1 protection:4 %100
+      skeleton:
+        amount: 4
+        equip:
+        - bow:1 power:5;punch:2 %100
+        - iron_helmet:1 protection:4 %100
+      stray:
+        amount: 2
+        equip:
+        - bow:1 power:5;slowness:1 %100
+        - iron_boots:1 protection:4 %100
+      spider: 2
+      silverfish: 2
+
+  # --- ACT 2 CLIMAX: DUNE STALKER AMBUSH (Wave 9) | Mini-Boss + 12 Mobs ---
+  act_2_stalker_climax:
+    waves: 9
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x2.0
+    damage-bonus: x2.2
+    general-effect: speed:1
+    mobs:
+      dune_stalker: 1
+      zombie:
+        amount: 3
+        equip:
+        - iron_sword:1 sharpness:5 %100
+        - iron_chestplate:1 protection:4 %100
+      skeleton:
+        amount: 3
+        equip:
+        - bow:1 power:5 %100
+      stray: 2
+      spider: 2
+      healer_witch: 1
+
+  # --- ACT 3: ILLAGER VANGUARD (Waves 11-14) | 16 Mobs ---
+  act_3_illager:
+    waves: 11-14
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x2.2
+    damage-bonus: x2.5
+    general-effect: speed:1
+    mobs:
+      vindicator:
+        amount: 4
+        equip:
+        - iron_axe:1 sharpness:6;knockback:2 %100
+        - diamond_chestplate:1 protection:5 %100
+      pillager:
+        amount: 4
+        equip:
+        - crossbow:1 quick_charge:2 %100
+        - iron_chestplate:1 protection:4 %100
+      ravager: 1
+      evoker: 1
+      witch: 1
+      zombie: 4
+      healer_witch: 1
+
+  # --- ACT 4: GLACIAL RAVINE (Waves 16-17) | 18 Mobs ---
+  act_4_glacial:
+    waves: 16-17
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x2.6
+    damage-bonus: x3.0
+    general-effect: speed:1, jump_boost:1
+    mobs:
+      stray:
+        amount: 5
+        equip:
+        - bow:1 power:6;punch:2;flame:1 %100
+        - diamond_helmet:1 projectile_protection:5 %100
+        - diamond_chestplate:1 thorns:2 %100
+      wither_skeleton:
+        amount: 4
+        equip:
+        - diamond_sword:1 sharpness:6;fire_aspect:1 %100
+        - netherite_helmet:1 protection:4 %100
+      breeze: 2
+      skeleton:
+        amount: 4
+        equip:
+        - bow:1 power:6 %100
+        - diamond_leggings:1 protection:4 %100
+      silverfish: 2
+      buffer_witch: 1
+
+  # --- ACT 4 CLIMAX: SOUL REAPER DESCENT (Wave 19) | Mini-Boss + 15 Mobs ---
+  act_4_soul_reaper_climax:
+    waves: 19
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x2.8
+    damage-bonus: x3.2
+    general-effect: speed:1
+    mobs:
+      soul_reaper: 1
+      stray: 4
+      wither_skeleton: 4
+      breeze: 2
+      skeleton: 3
+      buffer_witch: 1
+
+  # --- ACT 5: NETHER OUTPOST (Waves 21-24) | 20 Mobs ---
+  act_5_nether:
+    waves: 21-24
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x3.0
+    damage-bonus: x3.5
+    general-effect: fire_resistance:1, speed:1
+    mobs:
+      piglin_brute:
+        amount: 5
+        equip:
+        - golden_axe:1 sharpness:7;fire_aspect:2;knockback:2 %100
+        - netherite_chestplate:1 protection:5;thorns:2 %100
+      wither_skeleton:
+        amount: 5
+        equip:
+        - netherite_sword:1 sharpness:7;fire_aspect:2 %100
+        - diamond_chestplate:1 protection:5 %100
+      blaze: 3
+      magma_cube: 3
+      creeper:
+        amount: 2
+        explosion-damage: x3.0
+        effect: speed:1, glowing:1
+      healer_witch: 1
+      buffer_witch: 1
+
+  # --- ACT 6: FORTRESS OF SHADOW (Waves 26-27, 29) | 22 Mobs ---
+  act_6_shadow:
+    waves: 26-27, 29
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x3.6
+    damage-bonus: x3.8
+    general-effect: speed:1, resistance:1
+    mobs:
+      zombie:
+        amount: 5
+        equip:
+        - diamond_sword:1 sharpness:7;fire_aspect:2;knockback:2 %100
+        - diamond_chestplate:1 protection:5;thorns:3 %100
+        - diamond_helmet:1 protection:5 %100
+      skeleton:
+        amount: 5
+        equip:
+        - bow:1 power:7;punch:2;flame:1 %100
+        - diamond_chestplate:1 protection:5 %100
+      bogged:
+        amount: 4
+        equip:
+        - bow:1 power:7 %100
+        - diamond_helmet:1 protection:5 %100
+      creeper:
+        amount: 3
+        explosion-damage: x3.5
+        effect: speed:1, glowing:1
+      phantom: 3
+      healer_witch: 1
+      buffer_witch: 1
+
+  # --- ACT 7: SEISMIC CATACLYSM (Waves 31-34) | 24 Mobs ---
+  act_7_seismic:
+    waves: 31-34
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x4.2
+    damage-bonus: x4.2
+    general-effect: strength:1, speed:1
+    mobs:
+      ravager: 2
+      zoglin: 3
+      piglin_brute:
+        amount: 5
+        equip:
+        - netherite_axe:1 sharpness:8;knockback:2;fire_aspect:2 %100
+        - netherite_chestplate:1 protection:6;thorns:3 %100
+      vindicator:
+        amount: 5
+        equip:
+        - diamond_axe:1 sharpness:7 %100
+        - diamond_chestplate:1 protection:5 %100
+      iron_golem: 1
+      evoker: 2
+      creeper:
+        amount: 3
+        explosion-damage: x3.8
+      healer_witch: 1
+      buffer_witch: 1
+      silverfish: 1
+
+  # --- ACT 8: VOID RIFT AWAKENING (Waves 36-37, 39) | 26 Mobs ---
+  act_8_void:
+    waves: 36-37, 39
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x4.8
+    damage-bonus: x4.6
+    general-effect: speed:1, jump_boost:1
+    mobs:
+      enderman: 5
+      phantom: 4
+      bogged:
+        amount: 5
+        equip:
+        - bow:1 power:8;punch:2 %100
+        - diamond_chestplate:1 protection:6 %100
+        - diamond_helmet:1 protection:6 %100
+      creeper:
+        amount: 3
+        explosion-damage: x4.2
+        effect: speed:1, glowing:1
+      breeze: 3
+      silverfish: 4
+      healer_witch: 1
+      buffer_witch: 1
+
+  # --- ACT 9: INFERNAL WARHOST (Waves 41-44) | 28 Mobs ---
+  act_9_infernal:
+    waves: 41-44
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x5.5
+    damage-bonus: x5.0
+    general-effect: fire_resistance:1, speed:1, resistance:1
+    mobs:
+      piglin_brute:
+        amount: 6
+        equip:
+        - netherite_axe:1 sharpness:9;fire_aspect:2;knockback:2 %100
+        - netherite_chestplate:1 protection:7;thorns:3 %100
+        - netherite_boots:1 protection:6 %100
+      wither_skeleton:
+        amount: 6
+        equip:
+        - netherite_sword:1 sharpness:8;fire_aspect:2 %100
+        - netherite_chestplate:1 protection:6 %100
+      blaze: 4
+      magma_cube: 4
+      creeper:
+        amount: 3
+        explosion-damage: x4.5
+      ghast: 1
+      zoglin: 2
+      healer_witch: 1
+      buffer_witch: 1
+
+  # --- ACT 10: BLOODBATH OF THE DAMNED (Waves 46-47, 49, 51-54) | 30 Mobs ---
+  act_10_bloodbath:
+    waves: 46-47, 49, 51-54
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x6.2
+    damage-bonus: x5.8
+    general-effect: speed:1, strength:1, resistance:1
+    mobs:
+      piglin_brute:
+        amount: 5
+        equip:
+        - netherite_axe:1 sharpness:9;fire_aspect:2;knockback:3 %100
+        - netherite_chestplate:1 protection:7;thorns:4 %100
+        - netherite_helmet:1 protection:7 %100
+      vindicator:
+        amount: 5
+        equip:
+        - diamond_axe:1 sharpness:8 %100
+        - netherite_chestplate:1 protection:7 %100
+      wither_skeleton:
+        amount: 5
+        equip:
+        - netherite_sword:1 sharpness:8 %100
+        - netherite_helmet:1 protection:7 %100
+      bogged:
+        amount: 4
+        equip:
+        - bow:1 power:8;punch:3 %100
+        - netherite_chestplate:1 protection:6 %100
+      ravager: 2
+      evoker: 2
+      creeper:
+        amount: 3
+        explosion-damage: x5.0
+        effect: speed:1, glowing:1
+      breeze: 2
+      healer_witch: 1
+      buffer_witch: 1
+
+  # --- ACT 11: PRIMORDIAL CATASTROPHE (Waves 56-57, 59, 61-64) | 32 Mobs ---
+  act_11_primordial:
+    waves: 56-57, 59, 61-64
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x7.2
+    damage-bonus: x6.8
+    general-effect: speed:1, resistance:2, strength:1
+    mobs:
+      warden: 1
+      piglin_brute:
+        amount: 6
+        equip:
+        - netherite_axe:1 sharpness:10;fire_aspect:3;knockback:3 %100
+        - netherite_chestplate:1 protection:8;thorns:4 %100
+        - netherite_helmet:1 protection:7 %100
+      wither_skeleton:
+        amount: 6
+        equip:
+        - netherite_sword:1 sharpness:9;fire_aspect:2 %100
+        - netherite_chestplate:1 protection:7;thorns:3 %100
+      stray:
+        amount: 4
+        equip:
+        - bow:1 power:9;punch:3;flame:2 %100
+        - netherite_helmet:1 protection:7 %100
+      skeleton:
+        amount: 4
+        equip:
+        - bow:1 power:9;punch:3 %100
+        - netherite_chestplate:1 protection:7 %100
+      creeper:
+        amount: 3
+        explosion-damage: x5.5
+        effect: speed:1, glowing:1
+      evoker: 2
+      ravager: 2
+      blaze: 2
+      healer_witch: 1
+      buffer_witch: 1
+
+  # --- ACT 12: TWILIGHT OF THE GODS - ARMAGEDDON (Waves 66-67, 69, 71-74, 76-77, 79, 81-84, 86-87, 89, 91-94, 96, 98) | 34 Mobs ---
+  act_12_armageddon:
+    waves: 66-67, 69, 71-74, 76-77, 79, 81-84, 86-87, 89, 91-94, 96, 98
+    priority: 3
+    wave_types: mob
+    maxhp-bonus: x9.5
+    damage-bonus: x8.5
+    general-effect: speed:1, strength:2, resistance:2, regeneration:1
+    mobs:
+      warden: 1
+      piglin_brute:
+        amount: 6
+        equip:
+        - netherite_axe:1 sharpness:11;fire_aspect:3;knockback:3 %100
+        - netherite_chestplate:1 protection:9;thorns:5 %100
+        - netherite_helmet:1 protection:8 %100
+        - netherite_boots:1 protection:8 %100
+      wither_skeleton:
+        amount: 6
+        equip:
+        - netherite_sword:1 sharpness:11;fire_aspect:3;knockback:3 %100
+        - netherite_chestplate:1 protection:9;thorns:4 %100
+        - netherite_helmet:1 protection:8 %100
+      bogged:
+        amount: 4
+        equip:
+        - bow:1 power:10;punch:3;flame:2 %100
+        - netherite_helmet:1 protection:8 %100
+        - netherite_chestplate:1 protection:8 %100
+      stray:
+        amount: 4
+        equip:
+        - bow:1 power:10;punch:3 %100
+        - netherite_chestplate:1 protection:8 %100
+      creeper:
+        amount: 3
+        explosion-damage: x6.5
+        effect: speed:1, glowing:1
+      evoker: 2
+      ravager: 2
+      breeze: 2
+      phantom: 2
+      healer_witch: 1
+      buffer_witch: 1
+
+  # ========================================================================
+  # [CATEGORY 5]: ENDLESS MODE 10-WAVE INFINITE SYSTEM (Wave 101+)
+  # Rebalanced: 20-28 base mobs with tactical support witches.
+  # ========================================================================
+  endless_supply_loop:
+    waves: 105, 115, 125, 135, 145, 155, 165, 175, 185, 195
+    priority: 1
+    after-game: true
+    wave_types: supply
+    supply-id: supply15
+    duration: 25.0
+
+  endless_apex_boss:
+    waves: 110, 120, 130, 140, 150, 160, 170, 180, 190, 200
+    priority: 1
+    after-game: true
+    wave_types: boss
+    mobs:
+      apex_titan_endless: 1
+      warden: 1
+      piglin_brute:
+        amount: 5
+        equip:
+        - netherite_axe:1 sharpness:14;knockback:4 %100
+        - netherite_chestplate:1 protection:11;thorns:5 %100
+      wither_skeleton:
+        amount: 5
+        equip:
+        - netherite_sword:1 sharpness:14;fire_aspect:4 %100
+        - netherite_chestplate:1 protection:11;thorns:5 %100
+      healer_witch: 1
+      buffer_witch: 1
+
+  endless_swarm_loop:
+    waves: 101, 111, 121, 131, 141, 151, 161, 171, 181, 191
+    priority: 2
+    after-game: true
+    wave_types: swarm
+    mob-multiplier: 1.25
+    maxhp-bonus: x12.0
+    damage-bonus: x11.0
+    general-effect: speed:1, jump_boost:1, resistance:2
+    mobs:
+      piglin_brute: 6
+      wither_skeleton: 6
+      creeper:
+        amount: 4
+        explosion-damage: x6.5
+        effect: glowing:1, speed:1
+      stray: 5
+      breeze: 3
+      healer_witch: 1
+      buffer_witch: 1
+
+  endless_siege_loop:
+    waves: 103, 113, 123, 133, 143, 153, 163, 173, 183, 193
+    priority: 2
+    after-game: true
+    wave_types: mob
+    maxhp-bonus: x14.0
+    damage-bonus: x12.5
+    general-effect: speed:1, strength:2, resistance:2
+    mobs:
+      warden: 1
+      ravager: 3
+      creeper:
+        amount: 5
+        explosion-damage: x8.0
+        effect: glowing:1, speed:1
+      zoglin: 4
+      vindicator:
+        amount: 6
+        equip:
+        - netherite_axe:1 sharpness:13;knockback:3 %100
+        - netherite_chestplate:1 protection:10;thorns:5 %100
+      healer_witch: 1
+      buffer_witch: 1
+
+  endless_apex_legion:
+    waves: 107, 117, 127, 137, 147, 157, 167, 177, 187, 197
+    priority: 2
+    after-game: true
+    wave_types: mob
+    maxhp-bonus: x16.0
+    damage-bonus: x14.0
+    general-effect: speed:1, strength:2, resistance:3, regeneration:1
+    mobs:
+      warden: 2
+      ravager: 3
+      evoker: 4
+      piglin_brute:
+        amount: 6
+        equip:
+        - netherite_axe:1 sharpness:13;knockback:3 %100
+        - netherite_chestplate:1 protection:10;thorns:5 %100
+      wither_skeleton:
+        amount: 6
+        equip:
+        - netherite_sword:1 sharpness:13;fire_aspect:4 %100
+        - netherite_chestplate:1 protection:10;thorns:5 %100
+      healer_witch: 1
+      buffer_witch: 1
+
+  endless_stage3_base:
+    waves: 101+
+    priority: 4
+    after-game: true
+    wave_types: mob
+    maxhp-bonus: x14.0
+    damage-bonus: x12.0
+    general-effect: speed:1, strength:2, resistance:2, regeneration:1
+    mobs:
+      warden: 1
+      wither_skeleton:
+        amount: 6
+        equip:
+        - netherite_sword:1 sharpness:13;fire_aspect:4;knockback:3 %100
+        - netherite_chestplate:1 protection:10;thorns:5 %100
+        - netherite_helmet:1 protection:10 %100
+      piglin_brute:
+        amount: 6
+        equip:
+        - netherite_axe:1 sharpness:13;knockback:3 %100
+        - netherite_chestplate:1 protection:10;thorns:5 %100
+        - netherite_helmet:1 protection:10 %100
+      bogged:
+        amount: 5
+        equip:
+        - bow:1 power:12;punch:3 %100
+        - netherite_chestplate:1 protection:10 %100
+      creeper:
+        amount: 4
+        explosion-damage: x7.0
+        effect: glowing:1, speed:1
+      evoker: 3
+      ravager: 2
+      healer_witch: 1
+      buffer_witch: 1
+
+last-match:
+  wave: 9999
+  is-endless: true
+  players:
+    d6de4293-45c5-3d3b-9228-a85e6a699483:
+      name: Meowchan12
+      class: finallaw
+      kills: 191
+      damage: 78836.92046819729
+      bossKills: 0
+last-match-summary:
+  wave: 9999
+  endless: true
+  players:
+    d6de4293-45c5-3d3b-9228-a85e6a699483:
+      name: Meowchan12
+      class: finallaw
+      kills: 191
+      damage: 78836.92046819729
+      bossKills: 0

@@ -48,6 +48,11 @@ public class PlayerConnectionListener implements Listener {
             plugin.getShopManager().unloadPlayerData(uuid);
         }
 
+        // [v7.3 REWORK]: Clean up ultimate cooldowns and stasis state
+        if (plugin.getUltimateManager() != null) {
+            plugin.getUltimateManager().cleanupPlayer(uuid);
+        }
+
         // [v6.2 FIX] Memory Leak #2: Clean up GUIListener static maps
         vn.meowchan12.mobarenav2.listener.GUIListener.pendingEffectAction.remove(uuid);
         vn.meowchan12.mobarenav2.listener.GUIListener.pendingEffectClass.remove(uuid);

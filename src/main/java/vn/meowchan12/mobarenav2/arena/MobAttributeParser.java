@@ -119,6 +119,25 @@ public class MobAttributeParser {
             NamespacedKey apKey = new NamespacedKey(plugin, "ma_boss_arrow_pen");
             mob.getPersistentDataContainer().set(apKey, PersistentDataType.DOUBLE, pen);
         }
+
+        // =====================================================================
+        // [v8.3.0 FEATURE]: BOSS MELEE ARMOR PENETRATION & CRUSHING BLOW
+        // =====================================================================
+        double meleePen = bossConfig.getDouble("armor-penetration", bossConfig.getDouble("melee-penetration", 0.35));
+        NamespacedKey meleePenKey = new NamespacedKey(plugin, "ma_boss_melee_pen");
+        mob.getPersistentDataContainer().set(meleePenKey, PersistentDataType.DOUBLE, meleePen);
+
+        boolean crushingBlow = bossConfig.getBoolean("crushing-blow", true);
+        if (crushingBlow) {
+            NamespacedKey cbKey = new NamespacedKey(plugin, "ma_boss_crushing_blow");
+            mob.getPersistentDataContainer().set(cbKey, PersistentDataType.BYTE, (byte) 1);
+        }
+
+        double maxHpShred = bossConfig.getDouble("max-hp-shred", 0.03);
+        if (maxHpShred > 0) {
+            NamespacedKey shredKey = new NamespacedKey(plugin, "ma_boss_max_hp_shred");
+            mob.getPersistentDataContainer().set(shredKey, PersistentDataType.DOUBLE, maxHpShred);
+        }
     }
 
     private String getBonusString(String key, ConfigurationSection mobConfig, ConfigurationSection waveConfig) {
@@ -144,7 +163,8 @@ public class MobAttributeParser {
             }
             attrInstance.setBaseValue(newValue);
         } catch (NumberFormatException e) {
-            plugin.getLogger().warning("[MobArenav2] Invalid attribute format for " + attribute.name() + ": " + bonusStr);
+            String attrName = (attribute != null && attribute.getKey() != null) ? attribute.getKey().getKey() : "unknown";
+            plugin.getLogger().warning("[MobArenav2] Invalid attribute format for " + attrName + ": " + bonusStr);
         }
     }
 

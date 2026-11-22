@@ -37,6 +37,7 @@ public class WaveManager {
 
     public void startArena(Arena arena) {
         arena.setRunning(true);
+        arena.setMatchStartTime(System.currentTimeMillis());
         arena.setCurrentWave(0);
         arena.setVoting(false);
         arena.setEndlessMode(false);
@@ -89,7 +90,7 @@ public class WaveManager {
                     }
                     for (UUID uuid : arena.getActivePlayers()) {
                         Player p = Bukkit.getPlayer(uuid);
-                        if (p != null) p.sendActionBar(net.kyori.adventure.text.Component.text("§b⏳ Waiting for votes... " + (30 - (arena.getVoteTicks() / 2)) + "s"));
+                        if (p != null) p.sendActionBar(vn.meowchan12.mobarenav2.utils.ColorUtils.toAdventure("&b⏳ Waiting for votes... &e&l" + (30 - (arena.getVoteTicks() / 2)) + "s"));
                     }
                     return;
                 }
@@ -105,7 +106,35 @@ public class WaveManager {
                     }
                 }
 
-                if (isWaiting) {
+                // --- WAVE STATE MACHINE (MUTUALLY EXCLUSIVE STATES) ---
+                if (arena.isUpgradePhase()) {
+                    // [STATE 1: UPGRADE SELECTION PHASE]
+                    // Combat is completely paused; wait until all players select their cards or 30s timeout expires.
+                    arena.incrementUpgradePhaseTicks();
+                    boolean allFinished = true;
+                    for (UUID uuid : arena.getActivePlayers()) {
+                        ArenaPlayerProfile prof = arena.getPlayerProfiles().get(uuid);
+                        if (prof != null && prof.getPendingUpgradeChoices() > 0) {
+                            allFinished = false;
+                            break;
+                        }
+                    }
+
+                    if (allFinished || arena.getUpgradePhaseTicks() >= 60) {
+                        arena.setUpgradePhase(false);
+                        isWaiting = true;
+                        halfSecondTicks = 0;
+                        nextWaveDelay = 5.0; // 5-second preparation countdown before next wave spawns
+                        arena.broadcastMessage("§aAll upgrades selected! Next wave in 5 seconds.");
+                        for (UUID uuid : arena.getActivePlayers()) {
+                            Player p = Bukkit.getPlayer(uuid);
+                            if (p != null && p.isOnline()) {
+                                p.playSound(p.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.5f);
+                            }
+                        }
+                    }
+                } else if (isWaiting) {
+                    // [STATE 2: NEXT WAVE COUNTDOWN]
                     if (halfSecondTicks >= nextWaveDelay * 2) {
                         isWaiting = false;
                         halfSecondTicks = 0;
@@ -117,6 +146,8 @@ public class WaveManager {
                         spawnCooldown = 6;
 
                         arena.setCurrentWave(arena.getCurrentWave() + 1);
+                        // [v8.4.0 RACE-CONDITION FIX]: Always clear stale boss flag before spawning a new wave
+                        arena.setBossDefeatedInWave(false);
 
                         ConfigurationSection targetWave = arena.getWaveConfig(arena.getCurrentWave());
                         currentWaveType = (targetWave != null) ? targetWave.getString("wave_types", "mob").toLowerCase() : "mob";
@@ -129,6 +160,7 @@ public class WaveManager {
                         spawnWave(arena, arena.getCurrentWave(), targetWave, currentWaveType);
                     }
                 } else {
+                    // [STATE 3: ACTIVE WAVE COMBAT]
                     waveActiveHalfSeconds++;
                     if (spawnCooldown > 0) spawnCooldown--;
 
@@ -225,18 +257,119 @@ public class WaveManager {
                             return;
                         }
 
-                        isWaiting = true;
-                        halfSecondTicks = 0;
-                        nextWaveDelay = config.getDouble("settings.wave-conditions.next-wave", 6.0);
+                        for (UUID u : arena.getActivePlayers()) {
+                            ArenaPlayerProfile pr = arena.getPlayerProfiles().get(u);
+                            if (pr != null) pr.resetWaveRerolls();
+                        }
 
-                        if (plugin.getUpgradeManager().isUpgradeWave(arena, arena.getCurrentWave()) && !currentWaveType.equals("supply")) {
-                            nextWaveDelay = 10.0;
-                            arena.broadcastMessage("§b§l[UPGRADE] §aWave " + arena.getCurrentWave() + " cleared! Choose your mid-game buff!");
+                        if (plugin.getCelebrationService() != null) {
+                            plugin.getCelebrationService().celebrateWaveClear(arena, arena.getCurrentWave());
+                        }
+
+                        boolean wasBossWave = arena.hasBossDefeatedInWave() || currentWaveType.equals("boss") || currentWaveIsBoss;
+                        arena.setBossDefeatedInWave(false);
+
+                        boolean wasSwarmWave = !wasBossWave && currentWaveType.equals("swarm");
+                        boolean isSupplyOrBonus = currentWaveType.equals("supply") || currentWaveType.equals("bonus");
+                        boolean upgradeEnabled = plugin.getUpgradeManager().isUpgradeSystemEnabled(arena);
+                        boolean isStandardUpgradeWave = upgradeEnabled && !isSupplyOrBonus
+                                && plugin.getUpgradeManager().isUpgradeWave(arena, arena.getCurrentWave());
+                        boolean stackWithInterval = plugin.getUpgradeManager().isStackWithInterval(arena);
+
+                        int bossGrants = 0;
+                        int swarmGrants = 0;
+                        int normalGrants = 0;
+
+                        if (upgradeEnabled && !isSupplyOrBonus) {
+                            if (wasBossWave) {
+                                bossGrants = plugin.getUpgradeManager().getWaveDraftRule(arena, vn.meowchan12.mobarenav2.upgrade.UpgradeDraftType.BOSS).grantCount;
+                            } else if (wasSwarmWave) {
+                                swarmGrants = plugin.getUpgradeManager().getWaveDraftRule(arena, vn.meowchan12.mobarenav2.upgrade.UpgradeDraftType.SWARM).grantCount;
+                            }
+
+                            if (isStandardUpgradeWave && ((!wasBossWave && !wasSwarmWave) || stackWithInterval)) {
+                                normalGrants = plugin.getUpgradeManager().getWaveDraftRule(arena, vn.meowchan12.mobarenav2.upgrade.UpgradeDraftType.NORMAL).grantCount;
+                            }
+                        }
+
+                        int grantUpgrades = bossGrants + swarmGrants + normalGrants;
+
+                        boolean isFinalWave = arena.getCurrentWave() >= maxWaves && !arena.isEndlessMode();
+
+                        // [v7.5.5 UPGRADE PHASE]: Do not count down if players have upgrade choices to claim!
+                        if (grantUpgrades > 0 && !arena.isVoting()) {
+                            arena.setUpgradePhase(true);
+                            isWaiting = false; // Wave timer paused!
+                            halfSecondTicks = 0;
+
+                            String bannerTag;
+                            if (bossGrants > 0) {
+                                bannerTag = "&#FFAA00&l✦ BOSS WAVE " + arena.getCurrentWave() + " CLEARED! ✦";
+                            } else if (swarmGrants > 0) {
+                                bannerTag = "&#FF55FF&l✦ SWARM WAVE " + arena.getCurrentWave() + " CLEARED! ✦";
+                            } else {
+                                bannerTag = "&#00FFFF&l✦ WAVE " + arena.getCurrentWave() + " CLEARED! ✦";
+                            }
+
+                            net.md_5.bungee.api.chat.TextComponent waveMsg = new net.md_5.bungee.api.chat.TextComponent();
+                            for (net.md_5.bungee.api.chat.BaseComponent c : net.md_5.bungee.api.chat.TextComponent.fromLegacyText(vn.meowchan12.mobarenav2.utils.ColorUtils.colorize(bannerTag + " &f✦ &e["))) {
+                                waveMsg.addExtra(c);
+                            }
+
+                            for (net.md_5.bungee.api.chat.BaseComponent c : net.md_5.bungee.api.chat.TextComponent.fromLegacyText(vn.meowchan12.mobarenav2.utils.ColorUtils.colorize("&#FFAA00&l[CHOOSE BUFF (" + grantUpgrades + ")]"))) {
+                                c.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/ma upgrade"));
+                                c.setHoverEvent(new net.md_5.bungee.api.chat.HoverEvent(net.md_5.bungee.api.chat.HoverEvent.Action.SHOW_TEXT, new net.md_5.bungee.api.chat.ComponentBuilder("§a§lClick to open your Upgrade Selection GUI!").create()));
+                                waveMsg.addExtra(c);
+                            }
+
+                            for (net.md_5.bungee.api.chat.BaseComponent c : net.md_5.bungee.api.chat.TextComponent.fromLegacyText(vn.meowchan12.mobarenav2.utils.ColorUtils.colorize(" &f| "))) {
+                                waveMsg.addExtra(c);
+                            }
+
+                            for (net.md_5.bungee.api.chat.BaseComponent c : net.md_5.bungee.api.chat.TextComponent.fromLegacyText(vn.meowchan12.mobarenav2.utils.ColorUtils.colorize("&#55FF55&l[VIEW BUFFS]"))) {
+                                c.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/ma myupgrades"));
+                                c.setHoverEvent(new net.md_5.bungee.api.chat.HoverEvent(net.md_5.bungee.api.chat.HoverEvent.Action.SHOW_TEXT, new net.md_5.bungee.api.chat.ComponentBuilder("§b§lClick to inspect your active upgrades!").create()));
+                                waveMsg.addExtra(c);
+                            }
+
+                            for (net.md_5.bungee.api.chat.BaseComponent c : net.md_5.bungee.api.chat.TextComponent.fromLegacyText(vn.meowchan12.mobarenav2.utils.ColorUtils.colorize("&e]"))) {
+                                waveMsg.addExtra(c);
+                            }
+
+                            for (Player ap : arena.getPlayersAsObjects()) {
+                                ap.spigot().sendMessage(waveMsg);
+                            }
+
                             for (UUID uuid : arena.getActivePlayers()) {
+                                ArenaPlayerProfile profile = arena.getPlayerProfiles().get(uuid);
+                                if (profile != null) {
+                                    if (bossGrants > 0) {
+                                        profile.addPendingUpgradeChoices(bossGrants, vn.meowchan12.mobarenav2.upgrade.UpgradeDraftType.BOSS);
+                                    }
+                                    if (swarmGrants > 0) {
+                                        profile.addPendingUpgradeChoices(swarmGrants, vn.meowchan12.mobarenav2.upgrade.UpgradeDraftType.SWARM);
+                                    }
+                                    if (normalGrants > 0) {
+                                        profile.addPendingUpgradeChoices(normalGrants, vn.meowchan12.mobarenav2.upgrade.UpgradeDraftType.NORMAL);
+                                    }
+                                }
                                 Player p = Bukkit.getPlayer(uuid);
-                                if (p != null) vn.meowchan12.mobarenav2.arena.UpgradeGUI.open(p, plugin);
+                                if (p != null && p.isOnline()) {
+                                    if (bossGrants > 0) {
+                                        p.sendTitle("§6§l✦ BOSS WAVE CLEARED! ✦", "§eClaim " + grantUpgrades + " Victory Upgrade" + (grantUpgrades > 1 ? "s" : "") + "!", 10, 50, 15);
+                                        p.playSound(p.getLocation(), org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.2f, 1.0f);
+                                    } else if (swarmGrants > 0) {
+                                        p.sendTitle("§d§l✦ SWARM WAVE CLEARED! ✦", "§eClaim " + grantUpgrades + " Swarm Upgrade" + (grantUpgrades > 1 ? "s" : "") + "!", 10, 50, 15);
+                                        p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.2f, 1.2f);
+                                    }
+                                    vn.meowchan12.mobarenav2.arena.UpgradeGUI.open(p, plugin);
+                                }
                             }
                         } else {
+                            arena.setUpgradePhase(false);
+                            isWaiting = true;
+                            halfSecondTicks = 0;
+                            nextWaveDelay = config.getDouble("settings.wave-conditions.next-wave", 6.0);
                             arena.broadcastMessage("§aWave cleared! Next wave in " + nextWaveDelay + " seconds.");
                         }
                     }
@@ -253,12 +386,14 @@ public class WaveManager {
                         }
 
                         if (!arena.getSpectators().contains(uuid)) {
-                            if (isWaiting) {
+                            if (arena.isUpgradePhase()) {
+                                p.sendActionBar(vn.meowchan12.mobarenav2.utils.ColorUtils.toAdventure("&b&l✦ UPGRADE PHASE ✦ &e&lChoose your buffs! Next wave paused..."));
+                            } else if (isWaiting) {
                                 double timeLeft = Math.max(0.0, nextWaveDelay - (halfSecondTicks / 2.0));
-                                p.sendActionBar(net.kyori.adventure.text.Component.text("§e⏳ Next wave in " + String.format("%.1f", timeLeft) + " seconds..."));
+                                p.sendActionBar(vn.meowchan12.mobarenav2.utils.ColorUtils.toAdventure("&e&l⏳ Next wave in &f&l" + String.format("%.1f", timeLeft) + " &e&lseconds..."));
                             } else if (currentWaveType.equals("supply") || currentWaveType.equals("bonus")) {
                                 double timeLeft = Math.max(0.0, currentSupplyDuration - (waveActiveHalfSeconds / 2.0));
-                                p.sendActionBar(net.kyori.adventure.text.Component.text("§b🎁 Loot the chest! Drops items in: §e" + String.format("%.1f", timeLeft) + "s"));
+                                p.sendActionBar(vn.meowchan12.mobarenav2.utils.ColorUtils.toAdventure("&b&l🎁 Loot the chest! Drops items in: &e&l" + String.format("%.1f", timeLeft) + "s"));
 
                                 for (Location loc : arena.getActiveSupplies()) {
                                     if (loc != null) {
@@ -282,7 +417,17 @@ public class WaveManager {
                                     }
                                 }
                             } else {
-                                p.sendActionBar(net.kyori.adventure.text.Component.text("§c⚔ Mobs remaining: §e" + arena.getActiveMobs().size() + " §c⚔"));
+                                // [v8.2.0 ZERO-OVERHEAD COMBAT HUD]: Replaces redundant Mobs Remaining with Live Match Timer & DPS
+                                int maxWaves = arena.getConfig() != null ? arena.getConfig().getInt("settings.max-waves", 20) : 20;
+                                String waveStr = arena.isEndlessMode() ? (arena.getCurrentWave() + " &8(Endless)") : (arena.getCurrentWave() + "&7/&b" + maxWaves);
+                                ArenaPlayerProfile prof = arena.getPlayerProfiles().get(p.getUniqueId());
+                                int pKills = (prof != null) ? prof.getKills() : 0;
+                                long elapsedSec = arena.getElapsedDurationSeconds();
+                                int dps = (prof != null && elapsedSec > 0) ? (int)(prof.getDamageDealt() / elapsedSec) : 0;
+
+                                String hud = String.format("&6⏱ %s  &8│  &eWave %s  &8│  &c⚔ %d Kills  &8│  &a💥 %,d DPS",
+                                        arena.getElapsedTimeString(), waveStr, pKills, dps);
+                                p.sendActionBar(vn.meowchan12.mobarenav2.utils.ColorUtils.toAdventure(hud));
                             }
                         }
                     }
@@ -294,9 +439,14 @@ public class WaveManager {
     }
 
     // ==========================================
-    // [TỐI ƯU HÓA] HÀM QUÉT VÀ DỌN SẠCH MŨI TÊN (CLEAR ARROWS)
+    // [v8.2.0 TỐI ƯU HÓA]: DỌN SẠCH MŨI TÊN & VẬT PHẨM (ArenaMemoryManager)
     // ==========================================
     private void clearProjectiles(Arena arena) {
+        if (plugin.getArenaMemoryManager() != null) {
+            plugin.getArenaMemoryManager().cleanupWaveLeftovers(arena);
+            plugin.getArenaMemoryManager().purgeStaleMobs(arena);
+            return;
+        }
         Location p1 = arena.getP1();
         Location p2 = arena.getP2();
         if (p1 == null || p2 == null || p1.getWorld() == null) return;
@@ -308,14 +458,17 @@ public class WaveManager {
         double maxY = Math.max(p1.getY(), p2.getY());
         double maxZ = Math.max(p1.getZ(), p2.getZ());
 
-        for (org.bukkit.entity.Entity entity : p1.getWorld().getEntities()) {
+        double centerX = (minX + maxX) / 2.0;
+        double centerY = (minY + maxY) / 2.0;
+        double centerZ = (minZ + maxZ) / 2.0;
+        double rx = Math.max(1.0, (maxX - minX) / 2.0);
+        double ry = Math.max(1.0, (maxY - minY) / 2.0);
+        double rz = Math.max(1.0, (maxZ - minZ) / 2.0);
+        Location center = new Location(p1.getWorld(), centerX, centerY, centerZ);
+
+        for (org.bukkit.entity.Entity entity : p1.getWorld().getNearbyEntities(center, rx, ry, rz)) {
             if (entity instanceof org.bukkit.entity.Projectile) {
-                Location loc = entity.getLocation();
-                if (loc.getX() >= minX && loc.getX() <= maxX &&
-                        loc.getY() >= minY && loc.getY() <= maxY &&
-                        loc.getZ() >= minZ && loc.getZ() <= maxZ) {
-                    entity.remove();
-                }
+                entity.remove();
             }
         }
     }
@@ -332,17 +485,18 @@ public class WaveManager {
         double maxY = Math.max(p1.getY(), p2.getY());
         double maxZ = Math.max(p1.getZ(), p2.getZ());
 
+        double centerX = (minX + maxX) / 2.0;
+        double centerY = (minY + maxY) / 2.0;
+        double centerZ = (minZ + maxZ) / 2.0;
+        double rx = Math.max(1.0, (maxX - minX) / 2.0);
+        double ry = Math.max(1.0, (maxY - minY) / 2.0);
+        double rz = Math.max(1.0, (maxZ - minZ) / 2.0);
+        Location center = new Location(p1.getWorld(), centerX, centerY, centerZ);
+
         org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
-            for (org.bukkit.entity.Entity entity : p1.getWorld().getEntities()) {
-                if (entity != null && entity.isValid()) {
-                    if (entity instanceof org.bukkit.entity.Item) {
-                        Location loc = entity.getLocation();
-                        if (loc.getX() >= minX && loc.getX() <= maxX &&
-                                loc.getY() >= minY && loc.getY() <= maxY &&
-                                loc.getZ() >= minZ && loc.getZ() <= maxZ) {
-                            entity.remove();
-                        }
-                    }
+            for (org.bukkit.entity.Entity entity : p1.getWorld().getNearbyEntities(center, rx, ry, rz)) {
+                if (entity != null && entity.isValid() && entity instanceof org.bukkit.entity.Item) {
+                    entity.remove();
                 }
             }
         });
@@ -415,7 +569,7 @@ public class WaveManager {
                     }
                     else if (tick < startLockOnTick) {
                         strikeLoc = currentLoc;
-                        drawCircle(strikeLoc, 2.5, org.bukkit.Particle.FLAME);
+                        drawCircle(strikeLoc, explosionRadius, org.bukkit.Particle.FLAME);
 
                         if (tick % 10 == 0) {
                             targetPlayer.sendActionBar(net.kyori.adventure.text.Component.text("§c⚠ YOU ARE TARGETED BY LIGHTNING STRIKE! KEEP MOVING! ⚠"));
@@ -427,7 +581,7 @@ public class WaveManager {
                             targetPlayer.playSound(strikeLoc, org.bukkit.Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 2.0f);
                             targetPlayer.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 10, 1, false, false));
                         }
-                        drawCircle(strikeLoc, 2.5, org.bukkit.Particle.SOUL_FIRE_FLAME);
+                        drawCircle(strikeLoc, explosionRadius, org.bukkit.Particle.SOUL_FIRE_FLAME);
                     }
 
                     if (tick >= totalTicks) {
@@ -471,6 +625,10 @@ public class WaveManager {
         arena.setVoting(true);
         arena.setVoteTicks(0);
         arena.getActiveVotes().clear();
+
+        if (plugin.getCelebrationService() != null) {
+            plugin.getCelebrationService().celebrateVictory(arena);
+        }
 
         arena.broadcastMessage("§e§l[MobArenav2] You have conquered the final wave!");
         arena.broadcastMessage("§bThe Voting Phase has begun. Do you want to continue to ENDLESS MODE?");
@@ -544,9 +702,19 @@ public class WaveManager {
             arena.broadcastMessage("§a§lThe majority voted YES! Welcome to ENDLESS MODE!");
             arena.setEndlessMode(true);
 
-            for(UUID uuid : arena.getActivePlayers()) {
+            for (UUID uuid : arena.getActivePlayers()) {
                 Player p = Bukkit.getPlayer(uuid);
-                if(p != null) p.closeInventory();
+                if (p != null) {
+                    p.closeInventory();
+                    ArenaPlayerProfile profile = arena.getPlayerProfiles().get(uuid);
+                    if (profile != null && profile.getPendingUpgradeChoices() > 0) {
+                        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                            if (p.isOnline() && arena.isRunning()) {
+                                vn.meowchan12.mobarenav2.arena.UpgradeGUI.open(p, plugin);
+                            }
+                        }, 10L);
+                    }
+                }
             }
         } else {
             arena.broadcastMessage("§c§lThe players chose to STOP. The arena is now ending.");
@@ -639,10 +807,29 @@ public class WaveManager {
                     p.sendTitle("§4§lBOSS WAVE!", "§cPrepare for battle!", 10, 70, 20);
                     p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_ENDER_DRAGON_GROWL, 1.0f, 0.8f);
                 }
+            } else if (waveType.equalsIgnoreCase("swarm")) {
+                arena.broadcastMessage("§6§l⚠ SWARM WAVE " + waveNumber + " DETECTED! ⚠");
+                for (Player p : arena.getPlayersAsObjects()) {
+                    p.sendTitle("§6§lSWARM WAVE!", "§eOverwhelming numbers incoming!", 10, 70, 20);
+                    p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_SILVERFISH_AMBIENT, 1.0f, 1.2f);
+                }
+            } else if (waveType.equalsIgnoreCase("elite_mutation") || waveType.equalsIgnoreCase("elite")) {
+                arena.broadcastMessage("§5§l⚠ ELITE MUTATION WAVE " + waveNumber + "! ⚠");
+                for (Player p : arena.getPlayersAsObjects()) {
+                    p.sendTitle("§5§lELITE MUTATION!", "§dDangerous mutated affixes detected!", 10, 70, 20);
+                    p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_WITHER_SPAWN, 0.8f, 1.5f);
+                }
             } else {
                 arena.broadcastMessage("§e§lWave " + waveNumber + " has begun!");
                 for (Player p : arena.getPlayersAsObjects()) {
                     p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_ZOMBIE_VILLAGER_CURE, 0.5f, 1.5f);
+                }
+            }
+
+            // [v7.3 DECOUPLED]: Điều phối onWaveStart cho người chơi sở hữu Upgrade (Phantom Barrier, Titan Heart...)
+            if (plugin.getUpgradeRegistry() != null) {
+                for (Player p : arena.getPlayersAsObjects()) {
+                    plugin.getUpgradeRegistry().dispatchWaveStart(p, arena);
                 }
             }
 
@@ -666,7 +853,8 @@ public class WaveManager {
                                     break;
                                 }
                             }
-                            if (!isBossKey) {
+                            boolean isSupportMob = plugin.getSupportMobService() != null && plugin.getSupportMobService().isSupportMobKey(mobName);
+                            if (!isBossKey && !isSupportMob) {
                                 try {
                                     org.bukkit.entity.EntityType.valueOf(mobName.toUpperCase());
                                 } catch (Exception ex) {
@@ -685,7 +873,12 @@ public class WaveManager {
 
                             int amountToSpawn = ArenaMath.calculateSpawnAmount(baseAmount, playerCount, globalMultiplier);
                             for (int i = 0; i < amountToSpawn; i++) {
-                                arena.getSpawnQueue().add(() -> mobFactory.spawnArenaMob(arena, mobName, getSmartSpawnLocation(arena), mobSpecificConfig, targetWave));
+                                arena.getSpawnQueue().add(() -> {
+                                    org.bukkit.entity.LivingEntity spawned = mobFactory.spawnArenaMob(arena, mobName, getSmartSpawnLocation(arena), mobSpecificConfig, targetWave);
+                                    if (spawned != null && plugin.getMobSpawnerService() != null) {
+                                        plugin.getMobSpawnerService().applyWaveArchetype(spawned, arena, waveType);
+                                    }
+                                });
                             }
                         }
                     }
@@ -701,7 +894,8 @@ public class WaveManager {
                                 break;
                             }
                         }
-                        if (!isBossKey) {
+                        boolean isSupportMob = plugin.getSupportMobService() != null && plugin.getSupportMobService().isSupportMobKey(mobName);
+                        if (!isBossKey && !isSupportMob) {
                             try {
                                 org.bukkit.entity.EntityType.valueOf(mobName.toUpperCase());
                             } catch (Exception ex) {
@@ -714,7 +908,12 @@ public class WaveManager {
                         int amountToSpawn = ArenaMath.calculateSpawnAmount(baseAmount, playerCount, 1.0);
 
                         for (int i = 0; i < amountToSpawn; i++) {
-                            arena.getSpawnQueue().add(() -> mobFactory.spawnArenaMob(arena, mobName, getSmartSpawnLocation(arena), null, targetWave));
+                            arena.getSpawnQueue().add(() -> {
+                                org.bukkit.entity.LivingEntity spawned = mobFactory.spawnArenaMob(arena, mobName, getSmartSpawnLocation(arena), null, targetWave);
+                                if (spawned != null && plugin.getMobSpawnerService() != null) {
+                                    plugin.getMobSpawnerService().applyWaveArchetype(spawned, arena, waveType);
+                                }
+                            });
                         }
                     }
                 }
@@ -790,8 +989,7 @@ public class WaveManager {
 
                 Player p = Bukkit.getPlayer(uuid);
                 if (p != null) {
-                    p.sendMessage("§6[MobArenav2] §eYou secured a reward for clearing Wave " + wave + "!");
-                    p.sendMessage("§7(Rewards are stashed and will be given when you leave)");
+                    p.sendActionBar(vn.meowchan12.mobarenav2.utils.ColorUtils.toAdventure("&a✦ Wave " + wave + " Reward secured & stashed! ✦"));
                 }
             }
         } catch (Exception ex) {

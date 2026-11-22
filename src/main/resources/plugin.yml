@@ -1,12 +1,12 @@
 name: MobArenav2
-# Maven sẽ tự động thay placeholder này thành 3.0 khi build (nhờ filtering=true)
+# Maven will automatically replace this placeholder with project version during build
 version: '${project.version}'
 main: vn.meowchan12.mobarenav2.MobArenav2
 api-version: '1.21'
 prefix: MobArenav2
 authors: [Meowchan12]
 
-# Giữ nguyên depend và softdepend như bạn yêu cầu
+# Depend and softdepend configurations
 depend: [Vault]
 softdepend: [PlaceholderAPI, MythicMobs]
 
@@ -14,24 +14,51 @@ permissions:
   mobarenav2.admin:
     description: Grants full administrative access to MobArenav2
     default: op
+    children:
+      mobarenav2.player.*: true
+      mobarenav2.bypass.arenalock: true
+      mobarenav2.bypass.class: true
   mobarenav2.bypass.arenalock:
     description: Bypasses arena unlock requirements
     default: op
+  mobarenav2.bypass.class:
+    description: Bypasses arena class restrictions and class player limits for testing
+    default: op
+  mobarenav2.player.*:
+    description: Grants access to all MobArenav2 player commands
+    default: true
+    children:
+      mobarenav2.player.join: true
+      mobarenav2.player.leave: true
+      mobarenav2.player.spec: true
+      mobarenav2.player.list: true
+      mobarenav2.player.shop: true
+      mobarenav2.player.stats: true
+      mobarenav2.player.top: true
   mobarenav2.player.join:
-    description: Allows joining arenas
+    description: Allows joining arenas, selecting classes, readying up, and managing upgrades
     default: true
   mobarenav2.player.leave:
     description: Allows leaving arenas
     default: true
   mobarenav2.player.spec:
-    description: Allows spectating arenas
+    description: Allows spectating active arenas
     default: true
   mobarenav2.player.list:
-    description: Allows listing arenas
+    description: Allows listing available arenas
+    default: true
+  mobarenav2.player.shop:
+    description: Allows opening and purchasing from the upgrade shop
+    default: true
+  mobarenav2.player.stats:
+    description: Allows viewing lifetime arena statistics
+    default: true
+  mobarenav2.player.top:
+    description: Allows viewing arena leaderboards
     default: true
 
 commands:
   ma:
     description: Core command for MobArenav2
-    usage: /ma <join|leave|setup|...>
+    usage: /ma <help|join|leave|setup|...>
     aliases: [mobarena]

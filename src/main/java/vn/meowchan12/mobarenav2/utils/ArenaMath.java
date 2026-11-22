@@ -3,18 +3,19 @@ package vn.meowchan12.mobarenav2.utils;
 public class ArenaMath {
 
     /**
-     * Thuật toán: Tính số lượng quái sẽ sinh ra.
-     * Cứ thêm 1 người chơi, lượng quái tăng 50%, nhưng giới hạn tối đa chỉ nhân 3.5 lần (tương đương 6 người chơi).
-     * Để tránh việc 10-20 người chơi làm crash server vì quá nhiều Entity.
+     * Algorithm: Smart Mob Spawn Scaling.
+     * [v8.3.2 REBALANCE]:
+     * Each additional player adds +25% mobs (reduced from +50%), capped at 2.0x (reduced from 3.5x).
+     * Prevents multi-player lobbies from exceeding entity density limits (200+ mobs).
      */
     public static int calculateSpawnAmount(int baseAmount, int playerCount, double customMultiplier) {
-        if (playerCount <= 1) return (int) (baseAmount * customMultiplier);
+        if (playerCount <= 1) return (int) Math.round(baseAmount * customMultiplier);
 
-        // Công thức: Base * Multiplier * (1 + (Players - 1) * 0.5)
-        double scalingFactor = 1.0 + ((playerCount - 1) * 0.5);
+        // Formula: Base * Multiplier * (1 + (Players - 1) * 0.25)
+        double scalingFactor = 1.0 + ((playerCount - 1) * 0.25);
 
-        // Đặt mức trần tối đa là x3.5 lượng quái gốc
-        scalingFactor = Math.min(scalingFactor, 3.5);
+        // Cap maximum multiplier at 2.0x base amount
+        scalingFactor = Math.min(scalingFactor, 2.0);
 
         return (int) Math.floor(baseAmount * customMultiplier * scalingFactor);
     }

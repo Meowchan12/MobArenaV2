@@ -30,6 +30,9 @@ public class ClassGUI {
             ItemStack icon = classManager.getClassIcon(className).clone();
             ItemMeta meta = icon.getItemMeta();
 
+            // 0. Kiểm tra quyền Admin bypass testing
+            boolean isAdminBypass = player.hasPermission("mobarenav2.bypass.class") || player.hasPermission("mobarenav2.admin");
+
             // 1. Kiểm tra xem class này có được phép chơi ở map này không
             boolean isRestricted = !classManager.isClassAllowedInArena(className, arena);
 
@@ -38,16 +41,24 @@ public class ClassGUI {
             int current = classManager.getPlayersInClass(arena, className);
             boolean isFull = (!isRestricted && limit != -1 && current >= limit);
 
-            // Ghi đè icon thành Barrier nếu bị cấm HOẶC đã đầy
-            if (isRestricted || isFull) {
+            // Ghi đè icon thành Barrier nếu bị cấm HOẶC đã đầy (người chơi thường)
+            if ((isRestricted || isFull) && !isAdminBypass) {
                 icon.setType(Material.BARRIER);
             }
 
             if (meta != null) {
                 if (isRestricted) {
-                    meta.displayName(Component.text("§c§m" + className + "§r §4[RESTRICTED]"));
+                    if (isAdminBypass) {
+                        meta.displayName(Component.text("§d§l" + className + " §8[RESTRICTED BYPASS]"));
+                    } else {
+                        meta.displayName(Component.text("§c§m" + className + "§r §4[RESTRICTED]"));
+                    }
                 } else if (isFull) {
-                    meta.displayName(Component.text("§c§m" + className + "§r §4[FULL]"));
+                    if (isAdminBypass) {
+                        meta.displayName(Component.text("§d§l" + className + " §8[FULL BYPASS]"));
+                    } else {
+                        meta.displayName(Component.text("§c§m" + className + "§r §4[FULL]"));
+                    }
                 } else {
                     meta.displayName(Component.text("§6§l" + className));
                 }
@@ -66,7 +77,9 @@ public class ClassGUI {
 
                 lore.add(Component.text("§7--------------------"));
 
-                if (isRestricted) {
+                if (isAdminBypass && (isRestricted || isFull)) {
+                    lore.add(Component.text("§d★ Admin Bypass Active: Click to test!"));
+                } else if (isRestricted) {
                     lore.add(Component.text("§cMap restrictions apply!"));
                 } else if (!isFull) {
                     lore.add(Component.text("§eClick to equip this class."));

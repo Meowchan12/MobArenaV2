@@ -9,7 +9,7 @@ category:
   id: "base_stats"
   display-name: "&#55FF55&lPERMANENT BASE STATS"
   material: NETHERITE_CHESTPLATE
-  slot: 20
+  slot: 19
   lore:
     - "&7&m---------------------"
     - "&fUpgrade permanent base attributes."

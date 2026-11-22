@@ -18,6 +18,9 @@ import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.entity.FoodLevelChangeEvent;
+import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import vn.meowchan12.mobarenav2.MobArenav2;
@@ -298,11 +301,9 @@ public class ArenaProtectionListener implements Listener {
         if (event instanceof EntityCombustByEntityEvent || event instanceof EntityCombustByBlockEvent) {
             return;
         }
-        for (Arena arena : plugin.getArenaManager().getAllArenas()) {
-            if (arena.isRunning() && arena.getActiveMobs().contains(event.getEntity())) {
-                event.setCancelled(true);
-                return;
-            }
+        // [v8.0.5 OPTIMIZATION]: O(1) metadata check eliminates O(N) arena scans for all server entities
+        if (event.getEntity().hasMetadata("MA_MOB")) {
+            event.setCancelled(true);
         }
     }
 
@@ -321,12 +322,23 @@ public class ArenaProtectionListener implements Listener {
         }
 
         if (attacker != null && !attacker.equals(victim)) {
-            Arena arena = plugin.getArenaManager().getArenaByPlayer(victim);
-            if (arena != null && plugin.getArenaManager().getArenaByPlayer(attacker) == arena) {
+            Arena victimArena = plugin.getArenaManager().getArenaByPlayer(victim);
+            Arena attackerArena = plugin.getArenaManager().getArenaByPlayer(attacker);
 
-                boolean allowPvP = arena.getConfig().getBoolean("settings.rules.player-pvp", false);
+            // [v8.0.0 STRICT ISOLATION]: One is in arena and the other is outside, or they are in different arenas
+            if (victimArena != attackerArena) {
+                if (victimArena != null || attackerArena != null) {
+                    event.setCancelled(true);
+                    return;
+                }
+            }
+
+            // Both in the same arena -> Check player-pvp rule
+            if (victimArena != null && victimArena.isRunning()) {
+                boolean allowPvP = victimArena.getConfig().getBoolean("settings.rules.player-pvp", false);
                 if (!allowPvP) {
                     event.setCancelled(true);
+                    return;
                 }
             }
         }
@@ -335,14 +347,42 @@ public class ArenaProtectionListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerSplashPvP(PotionSplashEvent event) {
         if (event.getEntity().getShooter() instanceof Player attacker) {
-            Arena arena = plugin.getArenaManager().getArenaByPlayer(attacker);
-            if (arena != null && !arena.getConfig().getBoolean("settings.rules.player-pvp", false)) {
-                event.getAffectedEntities().removeIf(entity ->
-                        entity instanceof Player &&
-                                !entity.equals(attacker) &&
-                                plugin.getArenaManager().getArenaByPlayer((Player) entity) == arena
-                );
-            }
+            Arena attackerArena = plugin.getArenaManager().getArenaByPlayer(attacker);
+
+            event.getAffectedEntities().removeIf(entity -> {
+                if (entity instanceof Player victim) {
+                    Arena victimArena = plugin.getArenaManager().getArenaByPlayer(victim);
+                    // Outside player cannot splash arena players; arena player cannot splash outside players
+                    if (attackerArena != victimArena) {
+                        return true;
+                    }
+                    // Same arena, check PvP
+                    if (attackerArena != null && !attackerArena.getConfig().getBoolean("settings.rules.player-pvp", false)) {
+                        return !victim.equals(attacker);
+                    }
+                }
+                return false;
+            });
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onAreaCloudApply(org.bukkit.event.entity.AreaEffectCloudApplyEvent event) {
+        if (event.getEntity().getSource() instanceof Player attacker) {
+            Arena attackerArena = plugin.getArenaManager().getArenaByPlayer(attacker);
+
+            event.getAffectedEntities().removeIf(entity -> {
+                if (entity instanceof Player victim) {
+                    Arena victimArena = plugin.getArenaManager().getArenaByPlayer(victim);
+                    if (attackerArena != victimArena) {
+                        return true;
+                    }
+                    if (attackerArena != null && !attackerArena.getConfig().getBoolean("settings.rules.player-pvp", false)) {
+                        return !victim.equals(attacker);
+                    }
+                }
+                return false;
+            });
         }
     }
 
@@ -373,5 +413,55 @@ public class ArenaProtectionListener implements Listener {
             }
             return false;
         });
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEntityPickup(EntityPickupItemEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+
+        org.bukkit.entity.Item item = event.getItem();
+        Location itemLoc = item.getLocation();
+
+        for (Arena arena : plugin.getArenaManager().getAllArenas()) {
+            if (arena.containsLocation(itemLoc) || arena.containsLocation(player.getLocation())) {
+                if (!arena.getActivePlayers().contains(player.getUniqueId())) {
+                    event.setCancelled(true);
+                    return;
+                }
+            }
+        }
+    }
+
+    // =====================================================================
+    // [v7.5.6]: Spectator Hunger Protection
+    // Prevents spectators from starving or losing saturation over time.
+    // =====================================================================
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onFoodLevelChange(FoodLevelChangeEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            Arena arena = plugin.getArenaManager().getArenaByPlayer(player);
+            if (arena != null && arena.getSpectators().contains(player.getUniqueId())) {
+                event.setCancelled(true);
+                player.setFoodLevel(20);
+                player.setSaturation(20.0f);
+            }
+        }
+    }
+
+    // =====================================================================
+    // [v7.5.6]: Gamemode Protection (F3+F4 / /gamemode bypass barrier)
+    // Prevents admins & players inside running arenas from toggling gamemode.
+    // =====================================================================
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onGameModeChange(PlayerGameModeChangeEvent event) {
+        Player player = event.getPlayer();
+        if (plugin.getArenaManager().isInternalGameModeSwitch(player.getUniqueId())) {
+            return; // Internal plugin-managed switch allowed
+        }
+        Arena arena = plugin.getArenaManager().getArenaByPlayer(player);
+        if (arena != null && arena.isRunning()) {
+            event.setCancelled(true);
+            player.sendMessage("§c[MobArenav2] You cannot change game mode while participating in a running arena!");
+        }
     }
 }

@@ -1,0 +1,888 @@
+# ==============================================================================
+# MobArenav2 - Bosses Configuration (Server Tuning & Raid Roster)
+# [v8.3.0 GRAND FINALE]: Combat Overhaul, Armor Penetration, & Tactical Raid Skills
+#
+# NEW ATTRIBUTES IN v8.3.0:
+# - Damage: Base attack damage attribute of the boss entity.
+# - armor-penetration: Ratio (0.0 - 1.0) of melee damage that completely ignores armor/enchants as True Damage.
+# - crushing-blow: (true/false) When true, boss periodically charges a 2.0s-2.5s telegraphed heavy strike (red ring + audio). Breaks shields (Shield Gate protects against 1-shots) or deals heavy damage to unblocked targets. Dodge >4.5m for 0 dmg.
+# - max-hp-shred: Ratio (0.0 - 1.0) of player's Max HP dealt as bonus True Damage on basic melee hit.
+#
+# NEW TACTICAL RAID SKILLS IN v8.3.0:
+# - shield_break_burst: Channels an 800 HP apocalypse barrier. Raid DPS check; breaks or inflicts 60% Max HP nuke.
+# - telegraphed_slam: Places a visible 6m ground telegraph for 2.5s before striking for 70% Max HP.
+# - chain_of_fate: Binds paired players with a fiery tether; must sprint >16m apart within 5s to snap it.
+# - mortal_ground: Corrupts a 3.5m ground zone for 10s; deals wither damage and reduces healing received by -80%.
+# - blood_frenzy: Activates when boss falls below 30% HP; attacks heal 1% Max HP and gain terrifying particles.
+# ==============================================================================
+
+incarnation_of_the_radius:
+  type: WARDEN
+  Boss_displayname: '&4&l☠ Incarnation of the Radius ☠'
+  Bossbar: true
+  nametagshow: true
+  HP: 200000.0
+  Damage: 75.0
+  armor-penetration: 0.50
+  crushing-blow: true
+  max-hp-shred: 0.05
+  size: huge # [v7.0] 3.5x scale - Massive entity
+  spawn-random-player: false
+  spawn-message: '&4&l⚠ THE GROUND TREMBLES... An ancient evil has awakened! THE INCARNATION OF THE RADIUS HAS RISEN! ⚠'
+  spawn-sound: ENTITY_WARDEN_EMERGE
+  loot-supply: boss_loot_legendary
+  effect-bonus: resistance:2, fire_resistance:1
+  Equip: []
+  
+  # [v7.0] Counter-Meta Configuration
+  counter-meta:
+    damage-cap: 200 # Max damage per single hit
+    
+    anti-mace:
+      enabled: true
+      damage-threshold: 100 # Triggers if single hit > 100
+      reflect-multiplier: 1000 # 1000% reflected back to attacker
+      disarm: true # Knock weapon out of hand
+    
+    anti-elytra:
+      enabled: true
+      radius: 50 # Detection radius
+      damage: 15.0 # True damage when caught flying
+    
+    anti-ranged:
+      enabled: true
+      reflect-multiplier: 3.0 # 300% reflected damage
+      pull-range: 30.0 # Pull players closer if beyond this range
+    
+    anti-totem:
+      enabled: true # Boss skills bypass Totem of Undying
+  
+  # [v7.0] Multi-Phase Boss Configuration
+  phases:
+    phase_1:
+      hp-threshold: 100 # Active from 100% HP (initial phase)
+      skills:
+      - earthquake_smash
+      - void_prison
+      - knockbacker
+      - telegraphed_slam
+      - chain_of_fate
+      on-enter-skills: []
+      on-enter-message: ''
+    
+    phase_2:
+      hp-threshold: 60 # Triggers at 60% HP
+      skills:
+      - soul_drain
+      - minion_call
+      - earthquake_smash
+      - toxic_nova
+      - shield_break_burst
+      - mortal_ground
+      on-enter-skills:
+      - enrage
+      on-enter-message: '&4&l[PHASE 2] &c%boss% &eroars with bloodthirst! Thorns activate!'
+    
+    phase_3:
+      hp-threshold: 20 # Triggers at 20% HP
+      god-mode: true
+      god-mode-duration: 10 # 10 seconds of invulnerability
+      skills:
+      - toxic_nova
+      - ultimate_arrow
+      - meteor_shower
+      - magnetic_pull
+      - blood_frenzy
+      - abyssal_tether
+      on-enter-skills:
+      - enrage
+      on-enter-message: '&4&l[FINAL PHASE] &c%boss% &4ENTERS GOD MODE! SURVIVE THE ONSLAUGHT!'
+
+# ==========================================
+# MELEE & TANK BOSSES
+# ==========================================
+abyssal_warlord:
+  size: large
+  type: ZOMBIE
+  Boss_displayname: '&4&lAbyssal Warlord'
+  Bossbar: true
+  nametagshow: true
+  HP: 500.0
+  Damage: 24.0
+  armor-penetration: 0.35
+  crushing-blow: true
+  max-hp-shred: 0.03
+  effect-bonus: speed:2, resistance:1
+  Equip:
+  - diamond_sword:1 sharpness:5 %100
+  skill:
+  - knockbacker
+  - telegraphed_slam
+  - chain_of_fate
+  enrage-skill:
+  - blood_frenzy
+
+abyssal_warlordwither:
+  size: large
+  type: WITHER_SKELETON
+  Boss_displayname: '&d&lSUPER &c&lAbyssal Warlord'
+  Bossbar: true
+  nametagshow: true
+  HP: 850.0
+  Damage: 30.0
+  armor-penetration: 0.40
+  crushing-blow: true
+  max-hp-shred: 0.04
+  effect-bonus: speed:3, resistance:2
+  Equip:
+  - diamond_sword:1 sharpness:5;fire_aspect:2 %100
+  skill:
+  - knockbacker
+  - absolute_defense
+  - shield_break_burst
+  - mortal_ground
+  enrage-skill:
+  - blood_frenzy
+
+iron_behemoth:
+  size: large
+  loot-supply: boss_loot_forge
+  type: IRON_GOLEM
+  Boss_displayname: '&#FFAA00&lThe Iron Behemoth'
+  Bossbar: true
+  nametagshow: true
+  HP: 1500.0
+  Damage: 45.0
+  armor-penetration: 0.45
+  crushing-blow: true
+  max-hp-shred: 0.05
+  effect-bonus: speed:2, resistance:1
+  spawn-message: '&#FF5555&l⚠ The ground shakes... The Iron Behemoth has awakened! ⚠'
+  spawn-sound: ENTITY_ENDER_DRAGON_GROWL
+  # Equip section removed because Iron Golems cannot wield weapons
+  skill:
+  - earthquake_smash
+  - absolute_defense
+  - shield_break_burst
+  - telegraphed_slam
+  enrage-skill:
+  - lightning_strike
+  - blood_frenzy
+
+destroyer:
+  type: PIGLIN_BRUTE
+  size: large
+  Boss_displayname: '&e&lDestroyer Piglin'
+  Bossbar: true
+  nametagshow: true
+  HP: 2200.0
+  Damage: 42.0
+  armor-penetration: 0.42
+  crushing-blow: true
+  max-hp-shred: 0.04
+  effect-bonus: strength:1, resistance:1, speed:1
+  spawn-message: '&c&l⚠&d You want to pass the game? JUST FACE THE DESTROYER! ⚠'
+  spawn-sound: ENTITY_ENDER_DRAGON_GROWL
+  Equip:
+  - netherite_axe:1 sharpness:6 %100
+  - netherite_helmet:1 protection:4 %100
+  - netherite_boots:1 protection:4 %100
+  skill:
+  - berserker_charge
+  - knockbacker
+  - telegraphed_slam
+  - minion_call
+  enrage-skill:
+  - blood_frenzy
+
+# ==========================================
+# RANGED & HIGH-MOBILITY BOSSES
+# ==========================================
+eclipse_huntsman:
+  type: SKELETON
+  Boss_displayname: '&#00FFFF&lEclipse Huntsman'
+  Bossbar: true
+  nametagshow: true
+  HP: 600.0
+  Damage: 22.0
+  ranged-damage-multiplier: 8.5
+  arrow-penetration: 0.55
+  armor-penetration: 0.30
+  spawn-random-player: true
+  spawn-message: '&#00FFFF&l⚠ An arrow from the shadows... The Eclipse Huntsman has locked on! ⚠'
+  spawn-sound: ENTITY_SKELETON_HORSE_DEATH
+  effect-bonus: speed:2, jump_boost:2
+  Equip:
+  - bow:1 power:5;punch:2 %100
+  - chainmail_helmet:1 %100
+  skill:
+  - super_arrow
+  - ultimate_arrow
+  - gravity_pull
+  - dash_and_ranged
+  - chain_of_fate
+  - mortal_ground
+
+# ==========================================
+# DEATH MAGE / ASSASSIN BOSSES
+# ==========================================
+soul_reaper:
+  type: WITHER_SKELETON
+  Boss_displayname: '&#5555FF&lSoul Reaper'
+  Bossbar: true
+  nametagshow: true
+  HP: 1000.0
+  Damage: 32.0
+  armor-penetration: 0.40
+  crushing-blow: true
+  max-hp-shred: 0.04
+  spawn-message: '&#5555FF&l❄ Feel the chill of death... The Soul Reaper has arrived! ❄'
+  spawn-sound: ENTITY_WITHER_SPAWN
+  loot-supply: boss_loot_lich
+  Equip:
+  - netherite_sword:1 sharpness:5;knockback:2 %100
+  skill:
+  - boss_freeze
+  - death_mark
+  - soul_drain
+  - chain_of_fate
+  - mortal_ground
+  enrage-skill:
+  - blood_frenzy
+
+dune_stalker:
+  type: HUSK
+  Boss_displayname: '&#e3c076&lDune Stalker'
+  Bossbar: true
+  nametagshow: true
+  HP: 750.0
+  Damage: 28.0
+  armor-penetration: 0.35
+  crushing-blow: true
+  max-hp-shred: 0.03
+  effect-bonus: speed:2
+  spawn-message: '&#e3c076&l⚠ The sands whisper... The Dune Stalker is hunting! ⚠'
+  spawn-sound: ENTITY_HUSK_CONVERTED_TO_ZOMBIE
+  Equip:
+  - iron_sword:1 sharpness:4;knockback:1 %100
+  - chainmail_chestplate:1 protection:5 %100
+  skill:
+  - invis_teleporter
+  - dash_and_ranged
+  - shadow_warp
+  - chain_of_fate
+  enrage-skill:
+  - blood_frenzy
+
+venomous_goliath:
+  type: ZOMBIE_VILLAGER
+  size: large
+  Boss_displayname: '&#55FF55&lVenomous Goliath'
+  Bossbar: true
+  nametagshow: true
+  HP: 2400.0
+  Damage: 36.0
+  armor-penetration: 0.38
+  crushing-blow: true
+  max-hp-shred: 0.04
+  effect-bonus: resistance:2, speed:1
+  spawn-message: '&#55FF55&l⚠ Toxic fumes fill the air... The Venomous Goliath lumbers forth! ⚠'
+  spawn-sound: ENTITY_ZOMBIE_VILLAGER_CURE
+  Equip:
+  - iron_shovel:1 sharpness:5 %100
+  skill:
+  - toxic_nova
+  - gravity_pull
+  - telegraphed_slam
+  - mortal_ground
+  enrage-skill:
+  - blood_frenzy
+
+crimson_conjurer:
+  type: EVOKER
+  Boss_displayname: '&#AA0000&lCrimson Conjurer'
+  Bossbar: true
+  nametagshow: true
+  HP: 1500.0
+  Damage: 25.0
+  armor-penetration: 0.35
+  effect-bonus: speed:2, resistance:1
+  spawn-message: '&#AA0000&l⚠ An ancient ritual begins! The Crimson Conjurer awakens! ⚠'
+  spawn-sound: ENTITY_EVOKER_PREPARE_SUMMON
+  skill:
+  - minion_call
+  - knockbacker
+  - shield_break_burst
+  - chain_of_fate
+  - mortal_ground
+
+ironclad_vanguard:
+  type: VINDICATOR
+  size: large
+  Boss_displayname: '&#AAAAAA&lIronclad Vanguard'
+  Bossbar: true
+  nametagshow: true
+  HP: 1800.0
+  Damage: 38.0
+  armor-penetration: 0.42
+  crushing-blow: true
+  max-hp-shred: 0.04
+  effect-bonus: resistance:2, speed:1
+  spawn-message: '&#AAAAAA&l⚠ Blades drawn! The Ironclad Vanguard charges into battle! ⚠'
+  spawn-sound: ENTITY_VINDICATOR_CELEBRATE
+  Equip:
+  - iron_axe:1 sharpness:5 %100
+  - iron_chestplate:1 protection:4 %100
+  skill:
+  - magnetic_pull
+  - earthquake_smash
+  - berserker_charge
+  - telegraphed_slam
+  enrage-skill:
+  - blood_frenzy
+
+frostbite_archer:
+  type: STRAY
+  Boss_displayname: '&#55FFFF&lFrostbite Archer'
+  Bossbar: true
+  nametagshow: true
+  HP: 1200.0
+  Damage: 24.0
+  ranged-damage-multiplier: 5.0
+  arrow-penetration: 0.50
+  armor-penetration: 0.30
+  effect-bonus: speed:2
+  spawn-message: '&#55FFFF&l⚠ A freezing wind blows... The Frostbite Archer takes aim! ⚠'
+  spawn-sound: ENTITY_STRAY_AMBIENT
+  Equip:
+  - bow:1 power:4;punch:2 %100
+  skill:
+  - super_arrow
+  - ultimate_arrow
+  - dash_and_ranged
+  - boss_freeze
+  - mortal_ground
+
+# ==========================================
+# STAGE 3 & ADVANCED RAID BOSSES
+# ==========================================
+titan_of_the_depths:
+  type: WITHER_SKELETON
+  size: large
+  spawn-random-player: true
+  Boss_displayname: '&#00FFFF&l☠ Titan of the Depths ☠'
+  Bossbar: true
+  nametagshow: true
+  HP: 25000.0
+  Damage: 55.0
+  armor-penetration: 0.45
+  crushing-blow: true
+  max-hp-shred: 0.05
+  effect-bonus: speed:2, resistance:2, fire_resistance:1
+  spawn-message: '&#00FFFF&l⚠ THE ABYSS STIRS... The Titan of the Depths has emerged! ⚠'
+  spawn-sound: ENTITY_WARDEN_EMERGE
+  loot-supply: boss_loot_legendary
+  Equip:
+  - netherite_sword:1 sharpness:8;knockback:3 %100
+  - netherite_chestplate:1 protection:6;thorns:3 %100
+  counter-meta:
+    damage-cap: 300
+    anti-mace:
+      enabled: true
+      damage-threshold: 100
+      reflect-multiplier: 800
+      disarm: true
+    anti-elytra:
+      enabled: true
+      radius: 40
+      damage: 15.0
+    anti-ranged:
+      enabled: true
+      reflect-multiplier: 2.5
+      pull-range: 25.0
+    anti-totem:
+      enabled: true
+  skill:
+  - earthquake_smash
+  - abyssal_tether
+  - shield_break_burst
+  - telegraphed_slam
+  - chain_of_fate
+  - saitama_punch
+  enrage-skill:
+  - blood_frenzy
+
+stormpiercer:
+  type: BOGGED
+  size: large
+  ranged-damage-multiplier: 18.0
+  arrow-penetration: 0.90
+  armor-penetration: 0.35
+  spawn-random-player: true
+  Boss_displayname: '&#FFFF55&l⚡ Stormpiercer, Gale Sovereign ⚡'
+  Bossbar: true
+  nametagshow: true
+  HP: 45000.0
+  Damage: 45.0
+  effect-bonus: speed:3, jump_boost:3, resistance:2
+  spawn-message: '&#FFFF55&l⚠ THE HEAVENS ROAR! Stormpiercer darkens the arena with razor tempests! ⚠'
+  spawn-sound: ENTITY_LIGHTNING_BOLT_THUNDER
+  loot-supply: boss_loot_legendary
+  Equip:
+  - bow:1 power:12;punch:3;unbreaking:5 %100
+  - netherite_helmet:1 protection:7 %100
+  - netherite_boots:1 protection:7;feather_falling:5 %100
+  counter-meta:
+    damage-cap: 300
+    anti-elytra:
+      enabled: true
+      radius: 50
+      damage: 20.0
+    anti-ranged:
+      enabled: true
+      reflect-multiplier: 3.5
+      pull-range: 35.0
+    anti-totem:
+      enabled: true
+  skill:
+  - spammer_bow
+  - ultimate_arrow
+  - lightning_strike
+  - dash_and_ranged
+  - chain_of_fate
+  - mortal_ground
+
+dread_colossus:
+  type: IRON_GOLEM
+  size: large
+  spawn-random-player: true
+  Boss_displayname: '&#FFAA00&l⚔ Dread Colossus ⚔'
+  Bossbar: true
+  nametagshow: true
+  HP: 60000.0
+  Damage: 70.0
+  armor-penetration: 0.50
+  crushing-blow: true
+  max-hp-shred: 0.05
+  effect-bonus: speed:2, resistance:3, strength:2
+  spawn-message: '&#FFAA00&l⚠ CRUSHING FOOTSTEPS SHAKE THE REALM! The Dread Colossus charges! ⚠'
+  spawn-sound: ENTITY_IRON_GOLEM_REPAIR
+  loot-supply: boss_loot_forge
+  counter-meta:
+    damage-cap: 350
+    anti-mace:
+      enabled: true
+      damage-threshold: 80
+      reflect-multiplier: 1000
+      disarm: true
+    anti-totem:
+      enabled: true
+  skill:
+  - earthquake_smash
+  - berserker_charge
+  - magnetic_pull
+  - shield_break_burst
+  - telegraphed_slam
+  enrage-skill:
+  - lightning_strike
+  - blood_frenzy
+
+void_weaver:
+  type: CAVE_SPIDER
+  size: large
+  spawn-random-player: true
+  Boss_displayname: '&#AA00AA&l🌌 Void Weaver, Space Bender 🌌'
+  Bossbar: true
+  nametagshow: true
+  HP: 75000.0
+  Damage: 55.0
+  armor-penetration: 0.40
+  crushing-blow: true
+  max-hp-shred: 0.04
+  effect-bonus: speed:2, regeneration:2, resistance:2
+  spawn-message: '&#AA00AA&l⚠ REALITY WARPS AND FRACTURES! The Void Weaver consumes space itself! ⚠'
+  spawn-sound: ENTITY_ILLUSIONER_CAST_SPELL
+  loot-supply: boss_loot_legendary
+  counter-meta:
+    damage-cap: 350
+    anti-mace:
+      enabled: true
+      damage-threshold: 90
+      reflect-multiplier: 900
+      disarm: true
+    anti-elytra:
+      enabled: true
+      radius: 45
+      damage: 20.0
+    anti-ranged:
+      enabled: true
+      reflect-multiplier: 3.0
+      pull-range: 35.0
+    anti-totem:
+      enabled: true
+  skill:
+  - gravity_pull
+  - toxic_nova
+  - void_prison
+  - shadow_warp
+  - boss_freeze
+  - chain_of_fate
+  - mortal_ground
+
+frostmourne_specter:
+  type: STRAY
+  size: large
+  spawn-random-player: true
+  ranged-damage-multiplier: 12.0
+  arrow-penetration: 0.85
+  armor-penetration: 0.40
+  crushing-blow: true
+  max-hp-shred: 0.04
+  Boss_displayname: '&#55FFFF&l❄ Frostmourne Specter ❄'
+  Bossbar: true
+  nametagshow: true
+  HP: 100000.0
+  Damage: 60.0
+  effect-bonus: speed:2, resistance:2
+  spawn-message: '&#55FFFF&l⚠ A GLACIAL TEMPEST DESCENDS! The Frostmourne Specter freezes your blood! ⚠'
+  spawn-sound: ENTITY_STRAY_AMBIENT
+  loot-supply: boss_loot_lich
+  Equip:
+  - bow:1 power:10;punch:3 %100
+  - netherite_chestplate:1 protection:8;thorns:4 %100
+  - netherite_helmet:1 protection:8 %100
+  counter-meta:
+    damage-cap: 350
+    anti-elytra:
+      enabled: true
+      radius: 50
+      damage: 25.0
+    anti-ranged:
+      enabled: true
+      reflect-multiplier: 3.0
+      pull-range: 30.0
+    anti-mace:
+      enabled: true
+      damage-threshold: 100
+      reflect-multiplier: 800
+      disarm: true
+    anti-totem:
+      enabled: true
+  skill:
+  - boss_freeze
+  - cursed_ground
+  - dash_and_ranged
+  - ultimate_arrow
+  - shield_break_burst
+  - mortal_ground
+  - chain_of_fate
+
+infernal_warlord:
+  type: PIGLIN_BRUTE
+  size: large
+  spawn-random-player: true
+  Boss_displayname: '&#FF5500&l🔥 Infernal Warlord 🔥'
+  Bossbar: true
+  nametagshow: true
+  HP: 120000.0
+  Damage: 80.0
+  armor-penetration: 0.50
+  crushing-blow: true
+  max-hp-shred: 0.05
+  effect-bonus: strength:2, fire_resistance:1, resistance:2, speed:2
+  spawn-message: '&#FF5500&l⚠ THE FLAMES OF HELL MARCH WITH HIM! The Infernal Warlord charges! ⚠'
+  spawn-sound: ENTITY_PIGLIN_BRUTE_ANGRY
+  loot-supply: boss_loot_legendary
+  Equip:
+  - netherite_axe:1 sharpness:10;fire_aspect:3;knockback:3 %100
+  - netherite_helmet:1 protection:8 %100
+  - netherite_chestplate:1 protection:8;thorns:4 %100
+  - netherite_leggings:1 protection:8 %100
+  - netherite_boots:1 protection:8 %100
+  counter-meta:
+    damage-cap: 400
+    anti-mace:
+      enabled: true
+      damage-threshold: 90
+      reflect-multiplier: 1000
+      disarm: true
+    anti-ranged:
+      enabled: true
+      reflect-multiplier: 3.0
+      pull-range: 30.0
+    anti-totem:
+      enabled: true
+  phases:
+    phase_1:
+      hp-threshold: 100
+      skills:
+      - saitama_punch
+      - minion_call
+      - earthquake_smash
+      - telegraphed_slam
+      - chain_of_fate
+      on-enter-skills: []
+      on-enter-message: ''
+    phase_2:
+      hp-threshold: 50
+      skills:
+      - meteor_shower
+      - soul_drain
+      - saitama_punch
+      - shield_break_burst
+      - mortal_ground
+      - blood_frenzy
+      on-enter-skills:
+      - enrage
+      on-enter-message: '&#FF0000&l[PHASE 2] &c%boss% &4IGNITES HIS SOUL! HELLFIRE METEORS RAIN DOWN!'
+
+chaos_archon:
+  type: ILLUSIONER
+  size: large
+  spawn-random-player: true
+  Boss_displayname: '&#AA00FF&l🌀 Chaos Archon 🌀'
+  Bossbar: true
+  nametagshow: true
+  HP: 160000.0
+  Damage: 65.0
+  armor-penetration: 0.40
+  crushing-blow: true
+  max-hp-shred: 0.04
+  effect-bonus: speed:2, resistance:2, jump_boost:2
+  spawn-message: '&#AA00FF&l⚠ REALITY IS AN ILLUSION! The Chaos Archon splits into the dark! ⚠'
+  spawn-sound: ENTITY_ILLUSIONER_MIRROR_MOVE
+  loot-supply: boss_loot_legendary
+  Equip:
+  - bow:1 power:10;punch:3 %100
+  - netherite_chestplate:1 protection:8;thorns:4 %100
+  counter-meta:
+    damage-cap: 400
+    anti-mace:
+      enabled: true
+      damage-threshold: 80
+      reflect-multiplier: 1000
+      disarm: true
+    anti-elytra:
+      enabled: true
+      radius: 50
+      damage: 25.0
+    anti-ranged:
+      enabled: true
+      reflect-multiplier: 3.5
+      pull-range: 35.0
+    anti-totem:
+      enabled: true
+  skill:
+  - shadow_clone
+  - vertigo_pulse
+  - shadow_warp
+  - teleport_strike
+  - invis_teleporter
+  - chain_of_fate
+  - mortal_ground
+  - shield_break_burst
+
+harbinger_of_doom:
+  type: WITHER_SKELETON
+  size: large
+  spawn-random-player: true
+  Boss_displayname: '&#333333&l☠ Harbinger of Doom ☠'
+  Bossbar: true
+  nametagshow: true
+  HP: 200000.0
+  Damage: 90.0
+  armor-penetration: 0.50
+  crushing-blow: true
+  max-hp-shred: 0.05
+  effect-bonus: speed:3, resistance:3, strength:2
+  spawn-message: '&#333333&l⚠ YOUR TOTEMS CANNOT SAVE YOU NOW. The Harbinger of Doom is here! ⚠'
+  spawn-sound: ENTITY_WITHER_DEATH
+  loot-supply: boss_loot_legendary
+  Equip:
+  - netherite_sword:1 sharpness:12;fire_aspect:4;knockback:3 %100
+  - netherite_helmet:1 protection:10 %100
+  - netherite_chestplate:1 protection:10;thorns:5 %100
+  - netherite_leggings:1 protection:10 %100
+  - netherite_boots:1 protection:10 %100
+  counter-meta:
+    damage-cap: 400
+    anti-mace:
+      enabled: true
+      damage-threshold: 80
+      reflect-multiplier: 1000
+      disarm: true
+    anti-totem:
+      enabled: true
+    anti-elytra:
+      enabled: true
+      radius: 55
+      damage: 30.0
+    anti-ranged:
+      enabled: true
+      reflect-multiplier: 4.0
+      pull-range: 40.0
+  phases:
+    phase_1:
+      hp-threshold: 100
+      skills:
+      - death_mark
+      - lifesteal_aura
+      - chrono_stasis
+      - boss_freeze
+      - chain_of_fate
+      - mortal_ground
+      on-enter-skills: []
+      on-enter-message: ''
+    phase_2:
+      hp-threshold: 50
+      skills:
+      - toxic_nova
+      - earthquake_smash
+      - meteor_shower
+      - death_mark
+      - shield_break_burst
+      - telegraphed_slam
+      - blood_frenzy
+      on-enter-skills:
+      - enrage
+      on-enter-message: '&#FF0000&l[PHASE 2] &c%boss% &4TEARS THE FABRIC OF TIME! ENRAGE ACTIVATED!'
+
+the_fallen_king:
+  type: WARDEN
+  size: huge # 3.5x scale
+  spawn-random-player: false
+  Boss_displayname: '&#FF0000&l☠ THE FALLEN KING ☠'
+  Bossbar: true
+  nametagshow: true
+  HP: 500000.0
+  Damage: 110.0
+  armor-penetration: 0.55
+  crushing-blow: true
+  max-hp-shred: 0.06
+  effect-bonus: speed:3, resistance:3, strength:3, fire_resistance:1
+  spawn-message: '&#FF0000&l⚠ ALL HOPE IS LOST. BOW BEFORE THE FALLEN KING OF THE RADIUS! ⚠'
+  spawn-sound: ENTITY_WARDEN_ROAR
+  loot-supply: boss_loot_legendary
+  Equip:
+  - netherite_sword:1 sharpness:15;fire_aspect:5;unbreaking:10 %100
+  - netherite_helmet:1 protection:10;unbreaking:10 %100
+  - netherite_chestplate:1 protection:10;thorns:6;unbreaking:10 %100
+  - netherite_leggings:1 protection:10;unbreaking:10 %100
+  - netherite_boots:1 protection:10;unbreaking:10 %100
+  counter-meta:
+    damage-cap: 400
+    anti-mace:
+      enabled: true
+      damage-threshold: 80
+      reflect-multiplier: 1200
+      disarm: true
+    anti-elytra:
+      enabled: true
+      radius: 65
+      damage: 35.0
+    anti-ranged:
+      enabled: true
+      reflect-multiplier: 4.5
+      pull-range: 45.0
+    anti-totem:
+      enabled: true
+  phases:
+    phase_1:
+      hp-threshold: 100
+      skills:
+      - earthquake_smash
+      - void_prison
+      - saitama_punch
+      - telegraphed_slam
+      - chain_of_fate
+      on-enter-skills: []
+      on-enter-message: ''
+    phase_2:
+      hp-threshold: 60
+      skills:
+      - soul_drain
+      - meteor_shower
+      - toxic_nova
+      - abyssal_tether
+      - shield_break_burst
+      - mortal_ground
+      on-enter-skills:
+      - enrage
+      on-enter-message: '&#FF0000&l[PHASE 2] &c%boss% &eenters berserk bloodlust! Void chains and meteors erupt!'
+    phase_3:
+      hp-threshold: 25
+      god-mode: true
+      god-mode-duration: 10
+      skills:
+      - meteor_shower
+      - void_prison
+      - ultimate_arrow
+      - magnetic_pull
+      - lifesteal_aura
+      - blood_frenzy
+      on-enter-skills:
+      - enrage
+      on-enter-message: '&#4&l[FINAL PHASE] &c%boss% &4ENTERS GOD MODE FOR 10 SECONDS! SURVIVE THE WRATH!'
+
+apex_titan_endless:
+  type: WARDEN
+  size: huge
+  spawn-random-player: false
+  Boss_displayname: '&#FF0055&l☠ APEX TITAN [ENDLESS] ☠'
+  Bossbar: true
+  nametagshow: true
+  HP: 800000.0
+  Damage: 130.0
+  armor-penetration: 0.60
+  crushing-blow: true
+  max-hp-shred: 0.07
+  effect-bonus: speed:3, resistance:3, strength:4, fire_resistance:1
+  spawn-message: '&#FF0055&l⚠ THE ENDLESS ABYSS HAS AWAKENED AN APEX TITAN! ⚠'
+  spawn-sound: ENTITY_WARDEN_EMERGE
+  loot-supply: boss_loot_legendary
+  Equip:
+  - netherite_sword:1 sharpness:15;fire_aspect:5;knockback:4 %100
+  - netherite_chestplate:1 protection:12;thorns:6 %100
+  counter-meta:
+    damage-cap: 500
+    anti-mace:
+      enabled: true
+      damage-threshold: 80
+      reflect-multiplier: 1500
+      disarm: true
+    anti-elytra:
+      enabled: true
+      radius: 70
+      damage: 40.0
+    anti-ranged:
+      enabled: true
+      reflect-multiplier: 5.0
+      pull-range: 50.0
+    anti-totem:
+      enabled: true
+  phases:
+    phase_1:
+      hp-threshold: 100
+      skills:
+      - earthquake_smash
+      - void_prison
+      - chrono_stasis
+      - magnetic_pull
+      - telegraphed_slam
+      - chain_of_fate
+    phase_2:
+      hp-threshold: 50
+      god-mode: true
+      god-mode-duration: 8
+      skills:
+      - meteor_shower
+      - soul_drain
+      - toxic_nova
+      - ultimate_arrow
+      - shield_break_burst
+      - mortal_ground
+      - blood_frenzy
+      - abyssal_tether
+      on-enter-skills:
+      - enrage
+      on-enter-message: '&#FF0000&l[ENDLESS APEX RAGE] &c%boss% &4ENTERS GOD MODE! DEVASTATION IMMINENT!'

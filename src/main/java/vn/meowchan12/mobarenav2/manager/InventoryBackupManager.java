@@ -56,6 +56,7 @@ public class InventoryBackupManager {
         float xp = player.getExp();
         int level = player.getLevel();
         double health = player.getHealth();
+        org.bukkit.Location origLoc = player.getLocation().clone();
 
         // 2. Clear player's inventory immediately
         player.getInventory().clear();
@@ -69,6 +70,7 @@ public class InventoryBackupManager {
             config.set("xp", xp);
             config.set("level", level);
             config.set("health", health);
+            config.set("location", origLoc);
 
             try {
                 config.save(file);
@@ -85,8 +87,15 @@ public class InventoryBackupManager {
     // --- RESTORE SYSTEM ---
     @SuppressWarnings("unchecked")
     public void restoreBackup(Player player) {
+        restoreBackup(player, null);
+    }
+
+    public void restoreBackup(Player player, Runnable onComplete) {
         File file = new File(backupFolder, player.getUniqueId().toString() + ".yml");
-        if (!file.exists()) return;
+        if (!file.exists()) {
+            if (onComplete != null) onComplete.run();
+            return;
+        }
 
         // [v6.4 FIX] I/O Optimization: Read backup YAML file asynchronously
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -119,10 +128,25 @@ public class InventoryBackupManager {
                 if (config.contains("level")) player.setLevel(config.getInt("level"));
                 if (config.contains("health")) player.setHealth(Math.min(config.getDouble("health"), 20.0));
 
+                if (config.contains("location")) {
+                    Object locObj = config.get("location");
+                    if (locObj instanceof org.bukkit.Location savedLoc && savedLoc.getWorld() != null) {
+                        boolean inMatch = plugin.getArenaManager() != null &&
+                                (plugin.getArenaManager().isPlaying(player) || plugin.getArenaManager().isSpectating(player));
+                        if (!inMatch) {
+                            savedLoc.getWorld().getChunkAt(savedLoc).load(true);
+                            player.teleport(savedLoc);
+                        }
+                    }
+                }
+
                 player.updateInventory();
 
                 // Delete backup file to prevent item duplication
                 file.delete();
+                if (onComplete != null) {
+                    onComplete.run();
+                }
             });
         });
     }

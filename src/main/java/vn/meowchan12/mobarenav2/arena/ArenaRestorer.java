@@ -9,7 +9,9 @@ import vn.meowchan12.mobarenav2.MobArenav2;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ArenaRestorer {
 
@@ -25,7 +27,6 @@ public class ArenaRestorer {
     }
 
     public void backupArena(Arena arena) {
-        // SỬA LỖI TẠI ĐÂY: Dùng getP1() và getP2()
         if (arena.getP1() == null || arena.getP2() == null) {
             plugin.getLogger().warning("Cannot backup arena " + arena.getName() + " - Missing P1 or P2!");
             return;
@@ -74,7 +75,6 @@ public class ArenaRestorer {
     }
 
     public void restoreArena(Arena arena) {
-        // SỬA LỖI TẠI ĐÂY: Dùng getP1() và getP2()
         if (arena.getP1() == null || arena.getP2() == null) return;
 
         File backupFile = new File(backupFolder, arena.getName() + ".mabackup");
@@ -98,25 +98,9 @@ public class ArenaRestorer {
             }
 
             Bukkit.getScheduler().runTask(plugin, () -> {
-                int minX = Math.min(arena.getP1().getBlockX(), arena.getP2().getBlockX());
-                int minY = Math.min(arena.getP1().getBlockY(), arena.getP2().getBlockY());
-                int minZ = Math.min(arena.getP1().getBlockZ(), arena.getP2().getBlockZ());
-                int maxX = Math.max(arena.getP1().getBlockX(), arena.getP2().getBlockX());
-                int maxY = Math.max(arena.getP1().getBlockY(), arena.getP2().getBlockY());
-                int maxZ = Math.max(arena.getP1().getBlockZ(), arena.getP2().getBlockZ());
-
-                for (int x = minX; x <= maxX; x++) {
-                    for (int y = minY; y <= maxY; y++) {
-                        for (int z = minZ; z <= maxZ; z++) {
-                            Block b = world.getBlockAt(x, y, z);
-                            if (b.getType() != Material.AIR) {
-                                b.setType(Material.AIR, false);
-                            }
-                        }
-                    }
-                }
-
                 int originX = 0, originY = 0, originZ = 0;
+                Map<String, BlockData> targetBlocks = new HashMap<>();
+
                 for (String line : lines) {
                     if (line.startsWith("ORIGIN:")) {
                         String[] coords = line.substring(7).split(",");
@@ -133,8 +117,38 @@ public class ArenaRestorer {
                         int y = originY + Integer.parseInt(relCoords[1]);
                         int z = originZ + Integer.parseInt(relCoords[2]);
 
-                        BlockData blockData = Bukkit.createBlockData(parts[1]);
-                        world.getBlockAt(x, y, z).setBlockData(blockData, false);
+                        try {
+                            BlockData blockData = Bukkit.createBlockData(parts[1]);
+                            targetBlocks.put(x + "," + y + "," + z, blockData);
+                        } catch (Exception ignored) {}
+                    }
+                }
+
+                int minX = Math.min(arena.getP1().getBlockX(), arena.getP2().getBlockX());
+                int minY = Math.min(arena.getP1().getBlockY(), arena.getP2().getBlockY());
+                int minZ = Math.min(arena.getP1().getBlockZ(), arena.getP2().getBlockZ());
+                int maxX = Math.max(arena.getP1().getBlockX(), arena.getP2().getBlockX());
+                int maxY = Math.max(arena.getP1().getBlockY(), arena.getP2().getBlockY());
+                int maxZ = Math.max(arena.getP1().getBlockZ(), arena.getP2().getBlockZ());
+
+                // Tối ưu hóa: Chỉ cập nhật các khối có sự thay đổi thực tế
+                // Tránh xóa trắng hàng chục nghìn block sang AIR gây vỡ Palette và lag Server
+                for (int x = minX; x <= maxX; x++) {
+                    for (int y = minY; y <= maxY; y++) {
+                        for (int z = minZ; z <= maxZ; z++) {
+                            Block b = world.getBlockAt(x, y, z);
+                            BlockData targetData = targetBlocks.get(x + "," + y + "," + z);
+
+                            if (targetData != null) {
+                                if (!b.getBlockData().equals(targetData)) {
+                                    b.setBlockData(targetData, false);
+                                }
+                            } else {
+                                if (!b.getType().isAir()) {
+                                    b.setType(Material.AIR, false);
+                                }
+                            }
+                        }
                     }
                 }
                 plugin.getLogger().info("Arena " + arena.getName() + " has been successfully restored!");

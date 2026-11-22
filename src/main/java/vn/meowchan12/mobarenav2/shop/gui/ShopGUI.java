@@ -27,6 +27,9 @@ public class ShopGUI implements Listener {
     private final MobArenav2 plugin;
     private final ShopManager shopManager;
 
+    private static final java.util.Map<java.util.UUID, String> pendingConfirmations = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.Map<java.util.UUID, Long> confirmationTimes = new java.util.concurrent.ConcurrentHashMap<>();
+
     public ShopGUI(MobArenav2 plugin, ShopManager shopManager) {
         this.plugin = plugin;
         this.shopManager = shopManager;
@@ -89,6 +92,7 @@ public class ShopGUI implements Listener {
         }
         gui.setItem(49, closeBtn);
 
+        populateFinancialBar(gui, player, plugin);
         player.openInventory(gui);
     }
 
@@ -225,10 +229,18 @@ public class ShopGUI implements Listener {
             double currentStat = item.calculateStatForLevel(currentLvl);
             double nextStat = item.calculateStatForLevel(nextLvl);
 
+            boolean isTicket = item.getId().equalsIgnoreCase("reroll_ticket");
+            String currencyName = item.getPriceType().equalsIgnoreCase("CUSTOM_COMMAND") ? "Casino Chips"
+                    : (item.getPriceType().equalsIgnoreCase("VAULT") ? "Vault Money" : item.getPriceType());
+
             ItemStack icon = new ItemStack(item.getMaterial());
             ItemMeta meta = icon.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName(item.getDisplayName() + " §8[Lv." + currentLvl + "/" + item.getMaxLevel() + "]");
+                if (isTicket) {
+                    meta.setDisplayName(item.getDisplayName() + " §8[Held: §e" + shopData.getRerollTickets() + " Tickets§8]");
+                } else {
+                    meta.setDisplayName(item.getDisplayName() + " §8[Lv." + currentLvl + "/" + item.getMaxLevel() + "]");
+                }
 
                 List<String> formattedLore = new ArrayList<>();
                 for (String line : item.getLore()) {
@@ -242,11 +254,27 @@ public class ShopGUI implements Listener {
                 }
 
                 formattedLore.add(" ");
-                if (isMaxed) {
-                    formattedLore.add("§a✔ MAXED OUT!");
+                if (!isTicket && isMaxed) {
+                    if (categoryId.equalsIgnoreCase("ultimates")) {
+                        boolean isEquipped = item.getId().equalsIgnoreCase(shopData.getEquippedUltimate());
+                        if (isEquipped) {
+                            formattedLore.add("§a✔ CURRENTLY EQUIPPED");
+                            formattedLore.add("§7(Active in battle: Shift + Right-Click)");
+                            meta.addEnchant(org.bukkit.enchantments.Enchantment.UNBREAKING, 1, true);
+                            meta.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_ENCHANTS);
+                        } else {
+                            formattedLore.add("§e➡ Click to EQUIP this Ultimate!");
+                        }
+                    } else {
+                        formattedLore.add("§a✔ MAXED OUT!");
+                    }
                 } else {
-                    formattedLore.add("§ePrice: §6" + String.format("%,.0f", currentCost) + " " + item.getPriceType());
-                    formattedLore.add("§a➡ Click to Upgrade to Lv." + nextLvl);
+                    formattedLore.add("§ePrice: §6" + String.format("%,.0f", currentCost) + " " + currencyName);
+                    if (isTicket) {
+                        formattedLore.add("§a➡ Click to Purchase 1x Reroll Ticket");
+                    } else {
+                        formattedLore.add("§a➡ Click to Upgrade to Lv." + nextLvl);
+                    }
                 }
                 meta.setLore(formattedLore);
 
@@ -258,6 +286,34 @@ public class ShopGUI implements Listener {
             if (item.getSlot() >= 0 && item.getSlot() < 54) {
                 gui.setItem(item.getSlot(), icon);
             }
+        }
+
+        if (categoryId.equalsIgnoreCase("ultimates")) {
+            ItemStack guideBook = new ItemStack(Material.ENCHANTED_BOOK);
+            ItemMeta gMeta = guideBook.getItemMeta();
+            if (gMeta != null) {
+                gMeta.setDisplayName("§6§l✦ ULTIMATE LOADOUT GUIDE ✦");
+                List<String> gLore = new ArrayList<>();
+                gLore.add("§7§m----------------------------------");
+                gLore.add("§fMaster the art of Combat Ultimates:");
+                gLore.add(" ");
+                gLore.add("§e1. Single Loadout Limit:");
+                gLore.add(" §7You may only equip §b1 Ultimate §7at a time.");
+                gLore.add(" §7Click any owned ultimate in this menu");
+                gLore.add(" §7to equip it for your upcoming matches.");
+                gLore.add(" ");
+                gLore.add("§e2. In-Game Casting:");
+                gLore.add(" §7Hold any weapon and press §bShift + Right-Click");
+                gLore.add(" §7to trigger your equipped ultimate ability.");
+                gLore.add(" ");
+                gLore.add("§e3. Cooldown Reduction:");
+                gLore.add(" §7Upgrade §bCooldown Reduction §7in the");
+                gLore.add(" §7Advanced Stats shop to cast ultimates faster!");
+                gLore.add("§7§m----------------------------------");
+                gMeta.setLore(gLore);
+                guideBook.setItemMeta(gMeta);
+            }
+            gui.setItem(4, guideBook);
         }
 
         ItemStack backBtn = new ItemStack(Material.ARROW);
@@ -276,6 +332,7 @@ public class ShopGUI implements Listener {
         }
         gui.setItem(49, closeBtn);
 
+        populateFinancialBar(gui, player, plugin);
         player.openInventory(gui);
     }
 
@@ -348,15 +405,114 @@ public class ShopGUI implements Listener {
             if (meta.getPersistentDataContainer().has(itemKey, PersistentDataType.STRING)) {
                 String itemId = meta.getPersistentDataContainer().get(itemKey, PersistentDataType.STRING);
                 if (itemId != null) {
-                    boolean bought = shopManager.buyItem(player, itemId);
-                    if (bought) {
-                        ShopItem item = shopManager.getShopItems().get(itemId.toLowerCase());
-                        if (item != null) {
+                    ShopItem item = shopManager.getShopItems().get(itemId.toLowerCase());
+                    if (item != null) {
+                        PlayerShopData shopData = shopManager.getPlayerData(player.getUniqueId());
+                        if (item.getCategoryId().equalsIgnoreCase("ultimates") && shopData.getItemLevel(item.getId()) >= item.getMaxLevel()) {
+                            if (item.getId().equalsIgnoreCase(shopData.getEquippedUltimate())) {
+                                player.sendMessage("§e[MobArena Shop] This ultimate is already equipped!");
+                                player.playSound(player.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+                            } else {
+                                shopData.setEquippedUltimate(item.getId());
+                                shopManager.savePlayerDataToDisk(player.getUniqueId());
+                                player.sendMessage("§a[MobArena Shop] §eEquipped §6" + item.getDisplayName() + " §eas your active Ultimate!");
+                                player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 2.0f);
+                                openCategoryShop(player, item.getCategoryId(), plugin);
+                            }
+                            return;
+                        }
+
+                        int nextLvl = shopData.getItemLevel(item.getId()) + 1;
+                        double cost = item.calculateCostForLevel(nextLvl);
+
+                        boolean isExpensive = (item.getPriceType().equals("VAULT") && cost >= 1000000.0)
+                                || (item.getPriceType().equals("PLAYERPOINTS") && cost >= 1000.0);
+
+                        java.util.UUID puuid = player.getUniqueId();
+                        if (isExpensive && nextLvl <= item.getMaxLevel()) {
+                            String pending = pendingConfirmations.get(puuid);
+                            Long pTime = confirmationTimes.get(puuid);
+                            long now = System.currentTimeMillis();
+
+                            if (pending == null || !pending.equalsIgnoreCase(itemId) || pTime == null || now - pTime > 3000) {
+                                pendingConfirmations.put(puuid, itemId);
+                                confirmationTimes.put(puuid, now);
+                                player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_BELL, 1.0f, 1.5f);
+                                String cur = item.getPriceType().equalsIgnoreCase("CUSTOM_COMMAND") ? "Casino Chips" : (item.getPriceType().equalsIgnoreCase("VAULT") ? "Vault Money" : item.getPriceType());
+                                player.sendMessage("§e§l⚠ [SHOP CONFIRMATION] §fThis item costs §6" + String.format("%,.0f", cost) + " " + cur + "§f! Click again within 3s to confirm purchase.");
+                                return;
+                            } else {
+                                pendingConfirmations.remove(puuid);
+                                confirmationTimes.remove(puuid);
+                            }
+                        }
+
+                        boolean bought = shopManager.buyItem(player, itemId);
+                        if (bought) {
                             openCategoryShop(player, item.getCategoryId(), plugin);
                         }
                     }
                 }
             }
         }
+    }
+
+    private static void populateFinancialBar(Inventory gui, Player player, MobArenav2 plugin) {
+        double vaultBal = (plugin.getEconomy() != null) ? plugin.getEconomy().getBalance(player) : 0.0;
+        int ppPoints = 0;
+        if (plugin.getShopManager() != null && plugin.getShopManager().getPlayerPointsHook().isEnabled()) {
+            try {
+                if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+                    String ppStr = me.clip.placeholderapi.PlaceholderAPI.setPlaceholders(player, "%playerpoints_points%");
+                    ppPoints = Integer.parseInt(ppStr);
+                }
+            } catch (Exception ignored) {}
+        }
+        int rerollTickets = 0;
+        boolean hasHephaestus = false;
+        if (plugin.getShopManager() != null) {
+            PlayerShopData d = plugin.getShopManager().getPlayerData(player.getUniqueId());
+            if (d != null) {
+                rerollTickets = d.getRerollTickets();
+                hasHephaestus = d.hasHephaestusLicense();
+            }
+        }
+
+        // Slot 45: Vault
+        ItemStack vItem = new ItemStack(Material.GOLD_INGOT);
+        ItemMeta vMeta = vItem.getItemMeta();
+        if (vMeta != null) {
+            vMeta.setDisplayName("§6§lVAULT BALANCE");
+            List<String> lore = new ArrayList<>();
+            lore.add("§7Current Balance: §e$" + String.format("%,.2f", vaultBal));
+            vMeta.setLore(lore);
+            vItem.setItemMeta(vMeta);
+        }
+        gui.setItem(45, vItem);
+
+        // Slot 46: PlayerPoints
+        ItemStack pItem = new ItemStack(Material.AMETHYST_SHARD);
+        ItemMeta pMeta = pItem.getItemMeta();
+        if (pMeta != null) {
+            pMeta.setDisplayName("§d§lPLAYERPOINTS");
+            List<String> lore = new ArrayList<>();
+            lore.add("§7Current Points: §b" + ppPoints + " Pts");
+            pMeta.setLore(lore);
+            pItem.setItemMeta(pMeta);
+        }
+        gui.setItem(46, pItem);
+
+        // Slot 47: Tickets
+        ItemStack tItem = new ItemStack(Material.NETHER_STAR);
+        ItemMeta tMeta = tItem.getItemMeta();
+        if (tMeta != null) {
+            tMeta.setDisplayName("§b§lARENA PASSES");
+            List<String> lore = new ArrayList<>();
+            lore.add("§7Free Reroll Tickets: §e" + rerollTickets);
+            lore.add("§7Hephaestus License: " + (hasHephaestus ? "§a§lUNLOCKED" : "§cLocked"));
+            tMeta.setLore(lore);
+            tItem.setItemMeta(tMeta);
+        }
+        gui.setItem(47, tItem);
     }
 }

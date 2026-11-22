@@ -1,5 +1,6 @@
 package vn.meowchan12.mobarenav2.listener;
 
+import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.Registry;
@@ -16,6 +17,8 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
+import org.bukkit.event.entity.ProjectileLaunchEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -23,6 +26,8 @@ import org.bukkit.util.Vector;
 import vn.meowchan12.mobarenav2.MobArenav2;
 import vn.meowchan12.mobarenav2.arena.Arena;
 import vn.meowchan12.mobarenav2.arena.ArenaPlayerProfile;
+import vn.meowchan12.mobarenav2.boss.BossCounterMeta;
+import vn.meowchan12.mobarenav2.utils.AttributeUtils;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -37,6 +42,9 @@ public class ArenaMobCombatListener implements Listener {
     private final NamespacedKey lifestealKey;
     private final NamespacedKey invulnKey;
 
+    // [v7.0] Counter-Meta handler
+    private final BossCounterMeta counterMeta;
+
     public ArenaMobCombatListener(MobArenav2 plugin) {
         this.plugin = plugin;
         this.bowSpeedKey = new NamespacedKey(plugin, "bow_speed_bonus");
@@ -46,6 +54,28 @@ public class ArenaMobCombatListener implements Listener {
         this.saitamaKey = new NamespacedKey(plugin, "ma_saitama_punch");
         this.lifestealKey = new NamespacedKey(plugin, "ma_lifesteal");
         this.invulnKey = new NamespacedKey(plugin, "ma_invulnerable");
+
+        // [v7.0] Counter-Meta
+        this.counterMeta = new BossCounterMeta(plugin);
+    }
+
+    // =====================================================================
+    // [v7.2 FEATURE]: PROJECTILE LAUNCH TAGGING (BLAZE, BREEZE, GHAST)
+    // Ensures fireball, wind charge, and tridents carry arena damage bonuses
+    // =====================================================================
+    @EventHandler
+    public void onProjectileLaunch(ProjectileLaunchEvent event) {
+        if (!(event.getEntity().getShooter() instanceof LivingEntity shooter)) return;
+        if (!shooter.hasMetadata("MA_MOB")) return;
+
+        Projectile projectile = event.getEntity();
+        NamespacedKey dmgKey = new NamespacedKey(plugin, "ma_damage_bonus");
+        if (shooter.getPersistentDataContainer().has(dmgKey, PersistentDataType.STRING)) {
+            String bonus = shooter.getPersistentDataContainer().get(dmgKey, PersistentDataType.STRING);
+            if (bonus != null) {
+                projectile.getPersistentDataContainer().set(dmgKey, PersistentDataType.STRING, bonus);
+            }
+        }
     }
 
     // =====================================================================
@@ -63,8 +93,8 @@ public class ArenaMobCombatListener implements Listener {
             if (arena != null && arena.isRunning()) {
                 int currentWave = arena.getCurrentWave();
 
-                // Base +40% ranged damage + 3.5% per wave
-                double arrowMultiplier = 1.55 + (currentWave - 1) * 0.045;
+                // [v7.2 REBALANCE]: Balanced arrow multiplier (1.15 base + 2.0% per wave)
+                double arrowMultiplier = 1.15 + (currentWave - 1) * 0.02;
 
                 // [v5.6] Boss Ranged Damage Multiplier from bosses.yml config
                 NamespacedKey bossRangedKey = new NamespacedKey(plugin, "ma_boss_ranged_mult");
@@ -87,10 +117,10 @@ public class ArenaMobCombatListener implements Listener {
                     }
                 }
 
-                // +20% faster arrow velocity for sharper projectile trajectory
+                // [v7.2 REBALANCE]: Smooth arrow velocity (1.05x trajectory polish)
                 Vector velocity = projectile.getVelocity();
                 if (velocity != null && velocity.length() > 0) {
-                    projectile.setVelocity(velocity.multiply(1.30));
+                    projectile.setVelocity(velocity.multiply(1.05));
                 }
             }
         }
@@ -141,6 +171,9 @@ public class ArenaMobCombatListener implements Listener {
             Arena arena = plugin.getArenaManager().getArenaByPlayer(p);
             if (arena != null && arena.isRunning() && !arena.getSpectators().contains(p.getUniqueId())) {
                 ArenaPlayerProfile profile = arena.getPlayerProfiles().get(p.getUniqueId());
+                if (profile != null) {
+                    profile.addDamageTaken(event.getFinalDamage());
+                }
 
                 // --- RETAINED: PLAYER DODGE ALGORITHM ---
                 double shopDodge = (plugin.getShopManager() != null) ? plugin.getShopManager().getCustomStatBonus(p.getUniqueId(), "CUSTOM_DODGE") : 0.0;
@@ -156,6 +189,7 @@ public class ArenaMobCombatListener implements Listener {
                 LivingEntity damager = null;
                 if (event.getDamager() instanceof LivingEntity) damager = (LivingEntity) event.getDamager();
                 else if (event.getDamager() instanceof Projectile proj && proj.getShooter() instanceof LivingEntity) damager = (LivingEntity) proj.getShooter();
+                else if (event.getDamager() instanceof org.bukkit.entity.EvokerFangs fangs && fangs.getOwner() != null) damager = fangs.getOwner();
 
                 if (damager != null) {
                     // SAITAMA PUNCH (WITH 90% ARMOR PENETRATION)
@@ -173,9 +207,7 @@ public class ArenaMobCombatListener implements Listener {
 
                                 if (physDmg > 0) event.setDamage(physDmg);
                                 if (trueDmg > 0) {
-                                    double newHp = p.getHealth() - trueDmg;
-                                    if (newHp <= 0) p.damage(9999.0);
-                                    else p.setHealth(newHp);
+                                    vn.meowchan12.mobarenav2.service.CombatDamageService.applyLayeredDamage(p, trueDmg, false, damager, arena, plugin);
                                 }
 
                                 p.sendMessage("§4§l[FATAL IMPACT] §cHit by Saitama Punch! (" + (int)(penRatio * 100) + "% Armor Penetration)");
@@ -198,9 +230,11 @@ public class ArenaMobCombatListener implements Listener {
 
                             if (System.currentTimeMillis() <= expiry) {
                                 double healPercent = ThreadLocalRandom.current().nextDouble(minPercent, maxPercent);
+                                // [v7.0] NERF: Lifesteal heals based on Damage Dealt instead of Max HP
+                                double healAmount = event.getFinalDamage() * (healPercent / 100.0);
+                                // Fallback cap just in case
                                 AttributeInstance maxHpAttr = damager.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
                                 double maxHp = (maxHpAttr != null) ? maxHpAttr.getValue() : 100.0;
-                                double healAmount = maxHp * (healPercent / 100.0);
 
                                 damager.setHealth(Math.min(damager.getHealth() + healAmount, maxHp));
                                 damager.getWorld().spawnParticle(Particle.HEART, damager.getLocation().add(0, 2, 0), 3, 0.5, 0.5, 0.5, 0);
@@ -259,11 +293,99 @@ public class ArenaMobCombatListener implements Listener {
             else if (event.getDamager() instanceof Projectile proj && proj.getShooter() instanceof Player p) attacker = p;
 
             if (attacker != null) {
+                boolean isStandalone = victimTarget.hasMetadata("MA_TEST_BOSS") ||
+                    (victimTarget.getMetadata("MA_MOB").size() > 0 && "STANDALONE".equals(victimTarget.getMetadata("MA_MOB").get(0).asString()));
+
                 Arena arena = plugin.getArenaManager().getArenaByPlayer(attacker);
-                if (arena == null || !arena.isRunning() || arena.getSpectators().contains(attacker.getUniqueId())) {
-                    event.setCancelled(true);
-                    attacker.sendMessage("§c[MobArenav2] You cannot attack arena mobs from the outside!");
+                if (!isStandalone) {
+                    if (arena == null || !arena.isRunning() || arena.getSpectators().contains(attacker.getUniqueId())) {
+                        event.setCancelled(true);
+                        attacker.sendMessage("§c[MobArenav2] You cannot attack arena mobs from the outside!");
+                        return;
+                    }
+                }
+
+                // [v7.5.2 ANTI-RECURSION SHIELD]: If damage is generated from inside an active upgrade proc
+                // (e.g. Shockwave Cleave, Thorns burst, Executioner explosion, Elemental shock), process as secondary damage:
+                // Record damage dealt/boss stats, handle on-death if lethal, but NEVER recursively invoke counter-meta, shop crits, or dispatchAttack!
+                if (vn.meowchan12.mobarenav2.upgrade.UpgradeRegistry.isDispatchingAny()) {
+                    ArenaPlayerProfile profile = (arena != null) ? arena.getPlayerProfiles().get(attacker.getUniqueId()) : null;
+                    if (profile != null) {
+                        profile.addDamageDealt(event.getFinalDamage());
+                    }
+                    if (plugin.getBossRewardManager() != null && plugin.getBossRewardManager().isTracking(victimTarget.getUniqueId())) {
+                        plugin.getBossRewardManager().recordDamage(victimTarget.getUniqueId(), attacker.getUniqueId(), event.getFinalDamage());
+                    }
+                    if (victimTarget.getHealth() - event.getFinalDamage() <= 0) {
+                        if (arena != null && plugin.getUpgradeRegistry() != null) {
+                            plugin.getUpgradeRegistry().dispatchKill(attacker, victimTarget, arena);
+                        }
+                        NamespacedKey arenaBossKey = new NamespacedKey(plugin, "arena_boss_id");
+                        NamespacedKey maBossKey = new NamespacedKey(plugin, "ma_boss_id");
+                        boolean isBoss = victimTarget.hasMetadata("MA_BOSS")
+                                || victimTarget.getPersistentDataContainer().has(arenaBossKey, PersistentDataType.STRING)
+                                || victimTarget.getPersistentDataContainer().has(maBossKey, PersistentDataType.STRING);
+                        if (isBoss && profile != null) {
+                            if (!victimTarget.hasMetadata("MA_BOSS_CREDITED_" + attacker.getUniqueId())) {
+                                victimTarget.setMetadata("MA_BOSS_CREDITED_" + attacker.getUniqueId(), new org.bukkit.metadata.FixedMetadataValue(plugin, true));
+                                profile.addBossKill();
+                            }
+                        }
+                    }
                     return;
+                }
+
+                // [v7.5.4]: Configurable mob invulnerability damage delay (i-frames)
+                int hitDelay = 10;
+                if (plugin.getConfigManager() != null && plugin.getConfigManager().getSettings() != null) {
+                    hitDelay = plugin.getConfigManager().getSettings().getInt("combat.mob-hit-delay-ticks", 10);
+                }
+                if (hitDelay <= 0) {
+                    victimTarget.setNoDamageTicks(0);
+                    victimTarget.setMaximumNoDamageTicks(0);
+                } else if (victimTarget.getMaximumNoDamageTicks() != hitDelay) {
+                    victimTarget.setMaximumNoDamageTicks(hitDelay);
+                }
+
+                // [v7.5.6]: Mace Wind Burst Vanilla Guarantee
+                ItemStack mainHand = attacker.getInventory().getItemInMainHand();
+                if (mainHand != null && mainHand.getType().name().equalsIgnoreCase("MACE")) {
+                    int windBurstLevel = 0;
+                    try {
+                        org.bukkit.enchantments.Enchantment wbEnch = org.bukkit.enchantments.Enchantment.getByKey(org.bukkit.NamespacedKey.minecraft("wind_burst"));
+                        if (wbEnch != null && mainHand.containsEnchantment(wbEnch)) {
+                            windBurstLevel = mainHand.getEnchantmentLevel(wbEnch);
+                        }
+                    } catch (Throwable ignored) {}
+
+                    if (windBurstLevel > 0 && attacker.getFallDistance() > 1.0f) {
+                        final int level = windBurstLevel;
+                        final Player p = attacker;
+                        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                            if (p.isOnline() && !p.isDead()) {
+                                double yBoost = 0.75 + (level * 0.45);
+                                p.setVelocity(new org.bukkit.util.Vector(p.getVelocity().getX() * 0.5, yBoost, p.getVelocity().getZ() * 0.5));
+                                p.setFallDistance(0.0f);
+                                try {
+                                    p.getWorld().spawnParticle(Particle.valueOf("GUST"), p.getLocation(), 15, 0.5, 0.2, 0.5, 0.1);
+                                } catch (Throwable ignored) {
+                                    try {
+                                        p.getWorld().spawnParticle(Particle.EXPLOSION, p.getLocation(), 2);
+                                    } catch (Throwable ignored2) {}
+                                }
+                                try {
+                                    p.playSound(p.getLocation(), Sound.valueOf("ENTITY_BREEZE_WIND_BURST"), 1.0f, 1.2f);
+                                } catch (Throwable ignored) {
+                                    p.playSound(p.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_BLAST, 1.0f, 1.2f);
+                                }
+                            }
+                        }, 1L);
+                    }
+                }
+
+                // [v7.0] Counter-Meta processing (Mace/Ranged reflection)
+                if (counterMeta.processCounterMeta(event, attacker, victimTarget, arena)) {
+                    return; // Attack was countered
                 }
                 
                 // --- NEW: BOSS INVULNERABLE CHECK (DASH PHASE) ---
@@ -278,123 +400,86 @@ public class ArenaMobCombatListener implements Listener {
                     }
                 }
 
-                ArenaPlayerProfile profile = arena.getPlayerProfiles().get(attacker.getUniqueId());
-
-                // =====================================================================
-                // [v5.2 ENHANCED]: PLAYER CRITICAL STRIKE (WITH LV5 MEGA CRIT)
-                // =====================================================================
-                boolean isCrit = false;
-                double shopCrit = (plugin.getShopManager() != null) ? plugin.getShopManager().getCustomStatBonus(attacker.getUniqueId(), "CUSTOM_CRIT_BOOST") : 0.0;
-                double critChance = profile.getUpgradeValue("CRITICAL_STRIKE", plugin) + shopCrit;
-                if (critChance > 0 && ThreadLocalRandom.current().nextDouble(100.0) <= critChance) {
-                    int critLvl = profile.getUpgradeLevel("critical_strike");
-                    double critMultiplier = (critLvl >= 5) ? 3.0 : 2.0; // Lv5 Capstone: 3.0x Mega Crit
-                    event.setDamage(event.getDamage() * critMultiplier);
-
-                    if (critLvl >= 5) {
-                        attacker.playSound(attacker.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_BLAST, 1.0f, 1.2f);
-                        attacker.sendMessage("§6§l★ MEGA CRIT! (3.0x Damage)");
-                    } else {
-                        attacker.playSound(attacker.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, 1.0f, 1.0f);
-                    }
-                    attacker.getWorld().spawnParticle(Particle.CRIT, event.getEntity().getLocation().add(0, 1, 0), 20);
-                    isCrit = true;
+                // [v7.0] Track damage for boss rewards
+                if (plugin.getBossRewardManager() != null && plugin.getBossRewardManager().isTracking(victimTarget.getUniqueId())) {
+                    plugin.getBossRewardManager().recordDamage(victimTarget.getUniqueId(), attacker.getUniqueId(), event.getFinalDamage());
                 }
 
-                // =====================================================================
-                // [v5.2 CAPSTONE]: WARRIOR'S MIGHT CLEAVE SHOCKWAVE
-                // =====================================================================
-                int wmLvl = profile.getUpgradeLevel("warrior_might");
-                if (wmLvl >= 5 && event.getEntity() instanceof LivingEntity mainTarget) {
-                    double cleaveDmg = event.getDamage() * 0.30;
-                    for (Entity near : mainTarget.getNearbyEntities(3, 3, 3)) {
-                        if (near instanceof LivingEntity mobNear && mobNear.hasMetadata("MA_MOB") && !mobNear.equals(mainTarget)) {
-                            mobNear.damage(cleaveDmg, attacker);
-                            mobNear.getWorld().spawnParticle(Particle.SWEEP_ATTACK, mobNear.getLocation().add(0, 1, 0), 1);
+                // [v7.3 INTEGRATION]: ma shop standalone bonuses (Khi người chơi không có Upgrade tương ứng)
+                ArenaPlayerProfile profile = (arena != null) ? arena.getPlayerProfiles().get(attacker.getUniqueId()) : null;
+                if (profile != null) {
+                    profile.addDamageDealt(event.getFinalDamage());
+                }
+                if (profile != null && plugin.getShopManager() != null) {
+                    if (profile.getUpgradeLevel("critical_strike") <= 0) {
+                        double shopCrit = plugin.getShopManager().getCustomStatBonus(attacker.getUniqueId(), "CUSTOM_CRIT_BOOST");
+                        if (shopCrit > 0 && ThreadLocalRandom.current().nextDouble(100.0) <= shopCrit) {
+                            event.setDamage(event.getDamage() * 2.0);
+                            attacker.playSound(attacker.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, 1.0f, 1.0f);
+                            victimTarget.getWorld().spawnParticle(Particle.CRIT, victimTarget.getLocation().add(0, 1, 0), 20);
+                        }
+                    }
+                    if (profile.getUpgradeLevel("vampiric_strike") <= 0) {
+                        double shopLifesteal = plugin.getShopManager().getCustomStatBonus(attacker.getUniqueId(), "CUSTOM_LIFESTEAL_BOOST");
+                        if (shopLifesteal > 0 && ThreadLocalRandom.current().nextDouble(100.0) <= shopLifesteal) {
+                            AttributeInstance maxHpAttr = attacker.getAttribute(AttributeUtils.MAX_HEALTH);
+                            double maxHp = (maxHpAttr != null) ? maxHpAttr.getValue() : 20.0;
+                            double healAmount = Math.max(1.0, event.getDamage() * 0.10);
+                            attacker.setHealth(Math.min(maxHp, attacker.getHealth() + healAmount));
+                            attacker.getWorld().spawnParticle(Particle.HEART, attacker.getLocation().add(0, 2, 0), 4, 0.3, 0.3, 0.3, 0);
+                            attacker.playSound(attacker.getLocation(), Sound.ENTITY_WITCH_DRINK, 0.5f, 1.8f);
                         }
                     }
                 }
 
-                // =====================================================================
-                // [v5.2 REBALANCED]: ENHANCED LIFESTEAL & OVERHEAL ABSORPTION
-                // Heals 25% of Damage Dealt (min 2.0 HP). Lv3+ Overheal becomes Absorption!
-                // =====================================================================
-                double shopLifesteal = (plugin.getShopManager() != null) ? plugin.getShopManager().getCustomStatBonus(attacker.getUniqueId(), "CUSTOM_LIFESTEAL_BOOST") : 0.0;
-                double lifestealChance = profile.getUpgradeValue("LIFESTEAL", plugin) + shopLifesteal;
-                if (lifestealChance > 0 && ThreadLocalRandom.current().nextDouble(100.0) <= lifestealChance) {
-                    double maxHp = (attacker.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH) != null) ? attacker.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH).getValue() : 20.0;
-                    double healAmount = Math.max(2.0, event.getDamage() * 0.25);
-                    double currentHp = attacker.getHealth();
-
-                    if (currentHp + healAmount <= maxHp) {
-                        attacker.setHealth(currentHp + healAmount);
-                    } else {
-                        attacker.setHealth(maxHp);
-                        int vsLvl = profile.getUpgradeLevel("vampiric_strike");
-                        if (vsLvl >= 3) { // Lv3+ Capstone: Overheal converts to Absorption Shield
-                            double excess = (currentHp + healAmount) - maxHp;
-                            double currentAbs = attacker.getAbsorptionAmount();
-                            attacker.setAbsorptionAmount(Math.min(12.0, currentAbs + excess));
-                        }
-                    }
-                    attacker.getWorld().spawnParticle(Particle.HEART, attacker.getLocation().add(0, 2, 0), 4, 0.3, 0.3, 0.3, 0);
-                    attacker.playSound(attacker.getLocation(), Sound.ENTITY_WITCH_DRINK, 0.5f, 1.8f);
+                // [v8.3.0]: Boss Stun Vulnerability (+50% DMG from broken shield)
+                if (victimTarget.hasMetadata(vn.meowchan12.mobarenav2.boss.skill.ShieldBreakBurstSkill.META_STUN_BONUS)) {
+                    event.setDamage(event.getDamage() * 1.50);
                 }
 
-                if (true) {
-                    // =====================================================================
-                    // [v5.2 UPGRADE]: ARMOR_PIERCING (ARMOR SHREDDER)
-                    // Bypasses mob armor and deals True Damage
-                    // =====================================================================
-                    double armorPenPercent = profile.getUpgradeValue("ARMOR_PIERCING", plugin);
-                    if (armorPenPercent > 0) {
-                        double trueDmg = event.getDamage() * (armorPenPercent / 100.0);
-                        double newHp = victimTarget.getHealth() - trueDmg;
-                        if (newHp > 0) victimTarget.setHealth(newHp);
-                        victimTarget.getWorld().spawnParticle(Particle.SWEEP_ATTACK, victimTarget.getLocation().add(0, 1, 0), 2);
-                    }
+                // [v7.3 DECOUPLED]: Điều phối các Upgrade tấn công thông qua UpgradeRegistry
+                if (arena != null && plugin.getUpgradeRegistry() != null) {
+                    plugin.getUpgradeRegistry().dispatchAttack(event, attacker, victimTarget, arena);
 
-                    // =====================================================================
-                    // [v5.2 UPGRADE]: ELEMENTAL_INFUSION (ELEMENTAL STRIKE)
-                    // Applies Fire/Frost; Lv5 Capstone on Crit strikes Lightning!
-                    // =====================================================================
-                    int elemRank = profile.getUpgradeLevel("elemental_infusion");
-                    if (elemRank > 0) {
-                        victimTarget.setFireTicks(40 * elemRank);
-                        victimTarget.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, Math.min(2, elemRank - 1), false, false));
-
-                        if (elemRank >= 5 && isCrit) { // Capstone Lightning Strike
-                            victimTarget.getWorld().strikeLightningEffect(victimTarget.getLocation());
-                            double extraDmg = 15.0;
-                            double nHp = victimTarget.getHealth() - extraDmg;
-                            if (nHp > 0) victimTarget.setHealth(nHp);
-                            attacker.sendMessage("§e⚡ §lELEMENTAL CAPSTONE: LIGHTNING CRIT!");
+                    // [v8.2.0 OVERCAP STATS]: Apply Overpower % DMG & True Strike Flat True DMG
+                    if (profile != null) {
+                        if (profile.getOvercapDamageBonusPercent() > 0) {
+                            event.setDamage(event.getDamage() * (1.0 + profile.getOvercapDamageBonusPercent() / 100.0));
+                        }
+                        if (profile.getOvercapFlatTrueDmg() > 0) {
+                            final double flatTrue = profile.getOvercapFlatTrueDmg();
+                            final Player finalAttacker = attacker;
+                            Bukkit.getScheduler().runTask(plugin, () -> {
+                                if (victimTarget.isValid() && !victimTarget.isDead()) {
+                                    victimTarget.damage(flatTrue, finalAttacker);
+                                }
+                            });
                         }
                     }
 
-                    // =====================================================================
-                    // [v5.2 UPGRADE]: BLOODLUST & SOUL_ORB (ON KILL/DAMAGE HANDLERS)
-                    // =====================================================================
+                    // [v8.3.0]: Boss Shield Break Barrier Tracking
+                    if (victimTarget.hasMetadata(vn.meowchan12.mobarenav2.boss.skill.ShieldBreakBurstSkill.META_SHIELD_ACTIVE)) {
+                        double currentShield = victimTarget.getMetadata(vn.meowchan12.mobarenav2.boss.skill.ShieldBreakBurstSkill.META_SHIELD_HP).get(0).asDouble();
+                        double remaining = currentShield - event.getFinalDamage();
+                        victimTarget.setMetadata(vn.meowchan12.mobarenav2.boss.skill.ShieldBreakBurstSkill.META_SHIELD_HP, new org.bukkit.metadata.FixedMetadataValue(plugin, remaining));
+                        if (remaining > 0) {
+                            attacker.sendActionBar(vn.meowchan12.mobarenav2.utils.ColorUtils.toAdventure("&c&l[SHIELD] &e" + (int) remaining + " HP remaining!"));
+                        }
+                    }
+
+                    // Điều phối các Upgrade tiêu diệt quái (Soul Harvester, Bloodlust, Soul Orb, Midas Touch...)
                     if (victimTarget.getHealth() - event.getFinalDamage() <= 0) {
-                        int bloodlustLvl = profile.getUpgradeLevel("bloodlust");
-                        if (bloodlustLvl > 0) {
-                            attacker.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 100, Math.min(2, bloodlustLvl - 1), false, false));
-                            attacker.addPotionEffect(new PotionEffect(PotionEffectType.HASTE, 100, Math.min(2, bloodlustLvl - 1), false, false));
-                            attacker.playSound(attacker.getLocation(), Sound.ENTITY_ZOMBIE_VILLAGER_CURE, 0.5f, 2.0f);
-
-                            if (bloodlustLvl >= 5) { // Capstone Fire explosion on kill
-                                victimTarget.getWorld().spawnParticle(Particle.FLAME, victimTarget.getLocation().add(0, 1, 0), 25, 0.5, 0.5, 0.5, 0.1);
-                                attacker.getWorld().playSound(victimTarget.getLocation(), Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, 0.8f, 1.2f);
+                        plugin.getUpgradeRegistry().dispatchKill(attacker, victimTarget, arena);
+                        NamespacedKey arenaBossKey = new NamespacedKey(plugin, "arena_boss_id");
+                        NamespacedKey maBossKey = new NamespacedKey(plugin, "ma_boss_id");
+                        boolean isBoss = victimTarget.hasMetadata("MA_BOSS")
+                                || victimTarget.getPersistentDataContainer().has(arenaBossKey, PersistentDataType.STRING)
+                                || victimTarget.getPersistentDataContainer().has(maBossKey, PersistentDataType.STRING);
+                        if (isBoss && profile != null) {
+                            if (!victimTarget.hasMetadata("MA_BOSS_CREDITED_" + attacker.getUniqueId())) {
+                                victimTarget.setMetadata("MA_BOSS_CREDITED_" + attacker.getUniqueId(), new org.bukkit.metadata.FixedMetadataValue(plugin, true));
+                                profile.addBossKill();
                             }
-                        }
-
-                        double soulDropChance = profile.getUpgradeValue("SOUL_ORB", plugin);
-                        if (soulDropChance > 0 && ThreadLocalRandom.current().nextDouble(100.0) <= soulDropChance) {
-                            double maxHp = attacker.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH) != null ?
-                                           attacker.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH).getValue() : 20.0;
-                            attacker.setHealth(Math.min(attacker.getHealth() + 3.0, maxHp));
-                            attacker.getWorld().spawnParticle(Particle.SOUL, attacker.getLocation().add(0, 1, 0), 10, 0.3, 0.5, 0.3, 0.05);
-                            attacker.playSound(attacker.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.8f, 1.5f);
                         }
                     }
                 }
@@ -427,6 +512,27 @@ public class ArenaMobCombatListener implements Listener {
                 }
                 event.setYield(newYield);
             } catch (NumberFormatException ignored) {}
+        }
+    }
+
+    // =====================================================================
+    // [v7.5.2 FAIL-SAFE BARRIER]: Prevent transformation of Arena Mobs & Bosses
+    // (Piglin -> ZombifiedPiglin, Zombie -> Drowned, Skeleton -> Stray, etc.)
+    // =====================================================================
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEntityTransform(org.bukkit.event.entity.EntityTransformEvent event) {
+        if (event.getEntity().hasMetadata("MA_MOB")) {
+            event.setCancelled(true);
+        }
+    }
+
+    // =====================================================================
+    // [v7.5.2 ARENA INTEGRITY]: Prevent Endermen from griefing arena blocks
+    // =====================================================================
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEntityChangeBlock(org.bukkit.event.entity.EntityChangeBlockEvent event) {
+        if (event.getEntity().hasMetadata("MA_MOB")) {
+            event.setCancelled(true);
         }
     }
 }

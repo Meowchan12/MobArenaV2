@@ -68,6 +68,41 @@ public class ShopManager {
                     Files.copy(in, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 }
             } catch (Exception ignored) {}
+        } else {
+            // Auto-merge new items from default jar template if missing on disk
+            try (InputStream in = plugin.getResource("shops/" + fileName)) {
+                if (in != null) {
+                    YamlConfiguration diskCfg = YamlConfiguration.loadConfiguration(file);
+                    YamlConfiguration jarCfg = YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
+                    boolean modified = false;
+
+                    if (jarCfg.contains("category.slot")) {
+                        int jarSlot = jarCfg.getInt("category.slot");
+                        int diskSlot = diskCfg.getInt("category.slot", -1);
+                        if (diskSlot != jarSlot && (fileName.equals("advanced_stats.yml") || fileName.equals("base_stats.yml") || fileName.equals("ultimates.yml") || fileName.equals("casino_utilities.yml"))) {
+                            diskCfg.set("category.slot", jarSlot);
+                            modified = true;
+                        }
+                    }
+
+                    if (jarCfg.contains("items")) {
+                        ConfigurationSection jarItems = jarCfg.getConfigurationSection("items");
+                        if (jarItems != null) {
+                            for (String key : jarItems.getKeys(false)) {
+                                if (!diskCfg.contains("items." + key)) {
+                                    diskCfg.set("items." + key, jarItems.get(key));
+                                    modified = true;
+                                }
+                            }
+                        }
+                    }
+
+                    if (modified) {
+                        diskCfg.save(file);
+                        plugin.getLogger().info("[MobArenav2] Automatically synced shop config '" + fileName + "' with latest items and layout.");
+                    }
+                }
+            } catch (Exception ignored) {}
         }
     }
 
@@ -168,6 +203,12 @@ public class ShopManager {
                     data.setItemLevel(key, levelsSec.getInt(key, 0));
                 }
             }
+            if (config.contains("tickets.reroll")) {
+                data.setRerollTickets(config.getInt("tickets.reroll", 0));
+            }
+            if (config.contains("equipped_ultimate")) {
+                data.setEquippedUltimate(config.getString("equipped_ultimate", null));
+            }
         }
         return data;
     }
@@ -184,6 +225,12 @@ public class ShopManager {
 
         for (Map.Entry<String, Integer> entry : data.getItemLevels().entrySet()) {
             config.set("levels." + entry.getKey(), entry.getValue());
+        }
+        config.set("tickets.reroll", data.getRerollTickets());
+        config.set("equipped_ultimate", data.getEquippedUltimate());
+
+        if (plugin.getDatabaseManager() != null) {
+            plugin.getDatabaseManager().savePlayerShopDataAsync(data);
         }
 
         try {
@@ -209,14 +256,15 @@ public class ShopManager {
         PlayerShopData data = getPlayerData(player.getUniqueId());
         int currentLevel = data.getItemLevel(item.getId());
 
-        if (currentLevel >= item.getMaxLevel()) {
+        boolean isConsumable = item.getId().equalsIgnoreCase("reroll_ticket");
+        if (!isConsumable && currentLevel >= item.getMaxLevel()) {
             player.sendMessage("§c[MobArena Shop] You have reached the maximum level for this upgrade!");
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
             return false;
         }
 
         int targetLevel = currentLevel + 1;
-        double cost = item.calculateCostForLevel(targetLevel);
+        double cost = isConsumable ? item.getBaseCost() : item.calculateCostForLevel(targetLevel);
 
         boolean success = false;
         String pType = item.getPriceType();
@@ -286,6 +334,12 @@ public class ShopManager {
 
         if (success) {
             data.incrementItemLevel(item.getId());
+            if (item.getCategoryId().equalsIgnoreCase("ultimates") && data.getEquippedUltimate() == null) {
+                data.setEquippedUltimate(item.getId());
+            }
+            if (item.getId().equalsIgnoreCase("reroll_ticket")) {
+                data.addRerollTickets(1);
+            }
             savePlayerDataToDisk(player.getUniqueId());
 
             executeOutputActions(player, item, targetLevel);
@@ -312,7 +366,9 @@ public class ShopManager {
 
             if (action.startsWith("command:")) {
                 String cmd = action.replace("command:", "").trim();
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+                if (!cmd.startsWith("ma giveitem")) {
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+                }
             } else if (action.startsWith("permission:")) {
                 String perm = action.replace("permission:", "").trim();
                 if (perm.startsWith("add ")) {
@@ -394,10 +450,17 @@ public class ShopManager {
         if (upper.equals("GENERIC_MOVEMENT_SPEED") || upper.equals("MOVEMENT_SPEED")) return vn.meowchan12.mobarenav2.utils.AttributeUtils.MOVEMENT_SPEED;
         if (upper.equals("GENERIC_ARMOR") || upper.equals("ARMOR")) return vn.meowchan12.mobarenav2.utils.AttributeUtils.ARMOR;
         if (upper.equals("GENERIC_ARMOR_TOUGHNESS") || upper.equals("ARMOR_TOUGHNESS")) return vn.meowchan12.mobarenav2.utils.AttributeUtils.ARMOR_TOUGHNESS;
-        
+        if (upper.equals("GENERIC_ATTACK_SPEED") || upper.equals("ATTACK_SPEED")) return vn.meowchan12.mobarenav2.utils.AttributeUtils.ATTACK_SPEED;
+
         try {
-            return Attribute.valueOf(upper);
-        } catch (Exception e) {
+            org.bukkit.NamespacedKey key = org.bukkit.NamespacedKey.minecraft(upper.toLowerCase().replace("generic_", ""));
+            Attribute attr = org.bukkit.Registry.ATTRIBUTE.get(key);
+            if (attr != null) return attr;
+        } catch (Throwable ignored) {}
+
+        try {
+            return (Attribute) Attribute.class.getDeclaredField(upper).get(null);
+        } catch (Throwable ignored) {
             return null;
         }
     }

@@ -33,7 +33,7 @@ classes:
   # ==========================================
   Juggernaut:
     limit: 1 # Only 1 player can select this ultimate tank class
-    allowed-arenas: # [MỚI] Chỉ cho phép class này xuất hiện ở các map có tên dưới đây
+    allowed-arenas: # Only allow this class in specified arenas
       - "stage2"
       - "stage3"
       - "boss_room"

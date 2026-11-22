@@ -84,6 +84,24 @@ public class ArenaExpansion extends PlaceholderExpansion {
         if (params.equalsIgnoreCase("highest_wave")) {
             return String.valueOf(plugin.getUserDataManager().getStat(player.getUniqueId(), "highest_wave"));
         }
+        if (params.equalsIgnoreCase("boss_kills")) {
+            return String.valueOf(plugin.getUserDataManager().getStat(player.getUniqueId(), "boss_kills"));
+        }
+        if (params.equalsIgnoreCase("games_lost")) {
+            return String.valueOf(plugin.getUserDataManager().getStat(player.getUniqueId(), "games_lost"));
+        }
+        if (params.equalsIgnoreCase("win_rate")) {
+            return String.valueOf(plugin.getUserDataManager().getCareerDouble(player.getUniqueId(), "win_rate_percent")) + "%";
+        }
+        if (params.equalsIgnoreCase("damage_dealt")) {
+            return String.format("%.1f", plugin.getUserDataManager().getCareerDouble(player.getUniqueId(), "total_damage_dealt"));
+        }
+        if (params.equalsIgnoreCase("damage_taken")) {
+            return String.format("%.1f", plugin.getUserDataManager().getCareerDouble(player.getUniqueId(), "total_damage_taken"));
+        }
+        if (params.equalsIgnoreCase("favorite_class")) {
+            return plugin.getUserDataManager().getFavoriteClass(player.getUniqueId());
+        }
 
         // ==========================================
         // NHÓM 3: IN-GAME STATE
