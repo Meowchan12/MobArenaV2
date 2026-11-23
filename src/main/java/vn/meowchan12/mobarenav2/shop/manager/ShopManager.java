@@ -76,15 +76,6 @@ public class ShopManager {
                     YamlConfiguration jarCfg = YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
                     boolean modified = false;
 
-                    if (jarCfg.contains("category.slot")) {
-                        int jarSlot = jarCfg.getInt("category.slot");
-                        int diskSlot = diskCfg.getInt("category.slot", -1);
-                        if (diskSlot != jarSlot && (fileName.equals("advanced_stats.yml") || fileName.equals("base_stats.yml") || fileName.equals("ultimates.yml") || fileName.equals("casino_utilities.yml"))) {
-                            diskCfg.set("category.slot", jarSlot);
-                            modified = true;
-                        }
-                    }
-
                     if (jarCfg.contains("items")) {
                         ConfigurationSection jarItems = jarCfg.getConfigurationSection("items");
                         if (jarItems != null) {
@@ -163,7 +154,7 @@ public class ShopManager {
                                 priceType, baseCost, costMultiplier, maxLevel,
                                 attributeName, baseValue, incrementValue,
                                 inputPlaceholder, inputReqValue, inputFailMsg,
-                                inputTakeCmd, outputActions);
+                                inputTakeCmd, outputActions, sec);
 
                         shopItems.put(key.toLowerCase(), item);
                     }
@@ -256,7 +247,7 @@ public class ShopManager {
         PlayerShopData data = getPlayerData(player.getUniqueId());
         int currentLevel = data.getItemLevel(item.getId());
 
-        boolean isConsumable = item.getId().equalsIgnoreCase("reroll_ticket");
+        boolean isConsumable = item.isConsumable();
         if (!isConsumable && currentLevel >= item.getMaxLevel()) {
             player.sendMessage("§c[MobArena Shop] You have reached the maximum level for this upgrade!");
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
@@ -268,6 +259,8 @@ public class ShopManager {
 
         boolean success = false;
         String pType = item.getPriceType();
+        String curVault = plugin.getConfig().getString("shop.currency-names.vault", "Vault Money");
+        String curPP = plugin.getConfig().getString("shop.currency-names.playerpoints", "PlayerPoints");
 
         if (pType.equals("VAULT")) {
             if (plugin.getEconomy() == null) {
@@ -275,7 +268,7 @@ public class ShopManager {
                 return false;
             }
             if (!plugin.getEconomy().has(player, cost)) {
-                player.sendMessage("§c[MobArena Shop] You need $" + String.format("%.2f", cost) + " Vault Money!");
+                player.sendMessage("§c[MobArena Shop] You need $" + String.format(java.util.Locale.US, "%.2f", cost) + " " + curVault + "!");
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                 return false;
             }
@@ -286,7 +279,7 @@ public class ShopManager {
             int intCost = (int) Math.round(cost);
             if (playerPointsHook.isEnabled()) {
                 if (!playerPointsHook.hasEnoughPoints(player, intCost)) {
-                    player.sendMessage("§c[MobArena Shop] You need " + intCost + " PlayerPoints!");
+                    player.sendMessage("§c[MobArena Shop] You need " + intCost + " " + curPP + "!");
                     player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                     return false;
                 }
@@ -300,7 +293,7 @@ public class ShopManager {
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "points take " + player.getName() + " " + intCost);
                         success = true;
                     } else {
-                        player.sendMessage("§c[MobArena Shop] You need " + intCost + " PlayerPoints!");
+                        player.sendMessage("§c[MobArena Shop] You need " + intCost + " " + curPP + "!");
                         player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                         return false;
                     }
@@ -337,8 +330,11 @@ public class ShopManager {
             if (item.getCategoryId().equalsIgnoreCase("ultimates") && data.getEquippedUltimate() == null) {
                 data.setEquippedUltimate(item.getId());
             }
-            if (item.getId().equalsIgnoreCase("reroll_ticket")) {
-                data.addRerollTickets(1);
+            if (item.isConsumable()) {
+                int amount = item.getIntSetting("grant-amount", 1);
+                if (item.getId().toLowerCase().contains("reroll_ticket")) {
+                    data.addRerollTickets(amount);
+                }
             }
             savePlayerDataToDisk(player.getUniqueId());
 
@@ -412,11 +408,23 @@ public class ShopManager {
             }
         }
 
-        // Apply HP
+        // Apply HP (Preserving arena base-health and per-class base-health)
         double hpBonus = totalBonuses.getOrDefault(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH, 0.0);
         AttributeInstance hpInst = player.getAttribute(vn.meowchan12.mobarenav2.utils.AttributeUtils.MAX_HEALTH);
         if (hpInst != null) {
-            hpInst.setBaseValue(20.0 + hpBonus);
+            double baseHp = 20.0;
+            vn.meowchan12.mobarenav2.arena.Arena arena = plugin.getArenaManager().getArenaByPlayer(player);
+            if (arena != null && arena.getConfig() != null) {
+                vn.meowchan12.mobarenav2.arena.ArenaPlayerProfile prof = arena.getPlayerProfiles().get(player.getUniqueId());
+                String className = (prof != null) ? prof.getSelectedClass() : null;
+                double classHealth = (className != null) ? arena.getConfig().getDouble("settings.base-health-per-class." + className, 0.0) : 0.0;
+                double arenaBaseHealth = arena.getConfig().getDouble("settings.base-health", 0.0);
+                double targetBase = classHealth > 0 ? classHealth : arenaBaseHealth;
+                if (targetBase > 0) {
+                    baseHp = targetBase;
+                }
+            }
+            hpInst.setBaseValue(baseHp + hpBonus);
             player.setHealth(Math.min(player.getHealth() + hpBonus, hpInst.getValue()));
         }
 
@@ -502,5 +510,9 @@ public class ShopManager {
 
     public Map<String, ShopCategory> getCategories() { return categories; }
     public Map<String, ShopItem> getShopItems() { return shopItems; }
+    public ShopItem getShopItem(String id) {
+        if (id == null) return null;
+        return shopItems.get(id.toLowerCase());
+    }
     public PlayerPointsHook getPlayerPointsHook() { return playerPointsHook; }
 }

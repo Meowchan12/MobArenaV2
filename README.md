@@ -4,7 +4,7 @@
 ![API](https://img.shields.io/badge/Paper--API-1.21.4--R0.1-blue.svg?style=for-the-badge)
 ![Java](https://img.shields.io/badge/Java-21%20%7C%2025-orange.svg?style=for-the-badge&logo=openjdk)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)
-![Build Status](https://img.shields.io/badge/Build-v8.4.4--Passing-success.svg?style=for-the-badge)
+![Build Status](https://img.shields.io/badge/Build-v8.4.5--Passing-success.svg?style=for-the-badge)
 
 **MobArenav2** is a high-performance, modular Minecraft Paper/Purpur plugin engineered to revolutionize survival mob arenas into dynamic, scalable, and fully configurable **PvE Battlegrounds**.
 
@@ -42,7 +42,7 @@ Designed from the ground up for modern server networks, **MobArenav2** features 
   - [9.2 Administrator Commands](#92-administrator-commands)
   - [9.3 Permission Hierarchy](#93-permission-hierarchy)
 - [10. PlaceholderAPI Integration](#10-placeholderapi-integration)
-- [11. Migration & Troubleshooting (v8.4.4)](#11-migration--troubleshooting-v844)
+- [11. Migration & Troubleshooting (v8.4.5)](#11-migration--troubleshooting-v845)
 
 ---
 
@@ -52,6 +52,12 @@ Designed from the ground up for modern server networks, **MobArenav2** features 
   - SQLite WAL mode (`PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;`) with non-blocking asynchronous background writes.
   - Asynchronous YAML serialization for arena summaries and player records via `CompletableFuture.runAsync()`.
   - Centralized entity and projectile cleaner (`ArenaMemoryManager`) purging arrows, tridents, and loose drops.
+- **🛒 [v8.4.5] 100% Data-Driven Global Shop System:**
+  - Decoupled hardcoded values: dynamic currency names (`shop.currency-names`), customizable GUI titles, and configurable glass filler materials.
+  - Dynamic Shop Guide Menu generated directly from item models with click-to-navigate action jumping players right to the target category.
+  - Tunable confirmation dialogs (`shop.confirmation-thresholds`) with configurable timeout, double-click safeguard, and custom consumable flags.
+  - Fully configurable combat ultimates in `shops/ultimates.yml` (cooldowns, damage, velocities, radii, durations, knockback, and max cooldown reduction).
+  - Robust permanent attribute application that preserves custom arena base health and per-class base health.
 - **🛡️ [v8.4.4] Role-Aware Command Suite & Permission Security:**
   - Segregated `/ma help` system delivering tailored command lists for regular players (`/ma help player`) and administrators (`/ma help admin`).
   - Strict permission-gated tab-completion preventing non-admin players from discovering administrative commands or aliases.
@@ -360,15 +366,15 @@ All administrative commands are strictly permission-gated and hidden from non-ad
 
 ---
 
-## 11. Migration & Troubleshooting (v8.4.4)
+## 11. Migration & Troubleshooting (v8.4.5)
 
-### Upgrading to v8.4.4
+### Upgrading to v8.4.5
 1. **Backup:** Create a backup of your `plugins/MobArenav2/` directory.
-2. **Replace Jar:** Replace the existing jar with `MobArenav2-8.4.4.jar`.
-3. **Config Refresh:**
-   - Rename `upgrades.yml` to `upgrades_backup.yml` to allow the plugin to extract the complete dynamic data-driven upgrade configurations.
-   - Rename `bosses.yml` to `bosses_backup.yml` to extract dynamic boss AI delays and Crushing Blow parameters.
-   - Ensure `settings.yml` includes the `starter-upgrade:` configuration block.
+2. **Replace Jar:** Replace the existing jar with `MobArenav2-8.4.5.jar`.
+3. **Config Updates:**
+   - **`settings.yml`:** The plugin automatically extracts the new `shop:` configuration section (currency display names, confirmation thresholds, custom GUI styling, and ultimate reduction cap).
+   - **`shops/ultimates.yml`:** Delete or merge your `shops/ultimates.yml` to take advantage of the newly exposed combat variables (`cooldown`, `damage`, `radius`, `duration-ticks`, `heal-percent`, etc.).
+   - **`upgrades.yml` & `bosses.yml`:** No changes required if upgrading from v8.4.4.
 4. **Permissions:** If using a permission manager like LuckPerms, players only need `mobarenav2.player.*` (which is already `default: true`).
 
 ---

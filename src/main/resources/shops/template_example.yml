@@ -30,6 +30,10 @@ items:
     base-cost: 50000.0
     cost-multiplier: 1.5
     max-level: 5
+    # Optional custom settings:
+    # consumable: false       # Set true for consumable items (e.g. tickets, keys)
+    # grant-amount: 1         # Amount to grant per purchase if consumable
+    # confirm-purchase: false # Force 3s double-click confirmation dialog
     attribute: GENERIC_MAX_HEALTH
     base-value: 2.0
     increment: 2.0

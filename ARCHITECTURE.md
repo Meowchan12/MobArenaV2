@@ -1,7 +1,7 @@
 # 🏛️ MobArenav2 — Master Architectural Specification & Developer Handover Guide
 
 > **Target Audience:** Core Developers, Maintainers, and Autonomous AI Agents (Claude, DeepSeek, Cursor, Windsurf).  
-> **Plugin Version:** `v8.4.4`  
+> **Plugin Version:** `v8.4.5`  
 > **Target Platform:** Paper / Purpur 1.21.4 (Java 21 / 25)  
 > **Language Standards:** Java 21+ Virtual Threads & Modern Records, Bukkit/Adventure API, strictly English in-game text and documentation.
 
@@ -88,10 +88,21 @@ vn.meowchan12.mobarenav2/
 │   └── WaveManager.java            # Wave timers, mob spawning loop, Combat HUD Action Bar
 ├── pipeline/                       # Combat execution pipelines
 │   └── CombatPipeline.java         # Decoupled 4-phase damage processing pipeline
-├── shop/                           # Persistent progression shop
-│   ├── gui/ShopGUI.java            # Multi-tier shop GUI (Base Stats, Advanced Stats, Casino, Ultimates)
-│   ├── manager/ShopManager.java    # Shop purchase validation, attribute application, player points/vault
-│   └── model/PlayerShopData.java   # Player persistent shop attributes data model
+├── shop/                           # 100% Data-Driven Persistent Progression Shop Engine
+│   ├── gui/                        # Multi-tier shop GUI (Base Stats, Advanced Stats, Casino, Ultimates)
+│   │   ├── ShopGUI.java            # Dynamic menus, confirmation prompts, auto-generated Guide menu
+│   │   └── ShopHolder.java         # Inventory holder for shop security and anti-theft validation
+│   ├── hook/                       # Optional external currency integrations
+│   │   └── PlayerPointsHook.java   # Reflection-based PlayerPoints API hook
+│   ├── manager/                    # Shop lifecycle and persistent attribute application
+│   │   └── ShopManager.java        # Multi-currency purchases, dynamic YAML loader, base health preservation
+│   ├── model/                      # Shop data models
+│   │   ├── PlayerShopData.java     # Persistent player purchases, tickets, equipped ultimate loadout
+│   │   ├── ShopCategory.java       # Category metadata (display name, slot, icon, lore)
+│   │   └── ShopItem.java           # Dynamic shop item model with arbitrary YAML setting accessors
+│   └── ultimate/                   # Special combat abilities (Shift + Right-Click)
+│       ├── UltimateListener.java   # Combat activation trigger and stasis damage immunity
+│       └── UltimateManager.java    # Config-driven ultimate executions (cooldowns, damage, radii, durations)
 ├── upgrade/                        # Upgrade engine & card handlers
 │   ├── UpgradeHandler.java         # Master upgrade lifecycle contract with dynamic UpgradeData injection
 │   ├── UpgradeRegistry.java        # Registry routing combat hooks to concrete upgrade handlers

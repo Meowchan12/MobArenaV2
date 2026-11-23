@@ -30,6 +30,8 @@ items:
     base-cost: 500.0
     cost-multiplier: 1.0
     max-level: 99
+    consumable: true
+    grant-amount: 1
     input-check:
       placeholder: "%casino_chips_amount%"
       required-value: 500.0

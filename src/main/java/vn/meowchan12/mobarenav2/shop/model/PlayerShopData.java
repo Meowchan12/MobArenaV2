@@ -53,11 +53,19 @@ public class PlayerShopData {
     }
 
     public boolean hasPinPermit() {
-        return getItemLevel("upgrade_pin_permit") > 0;
+        if (getItemLevel("upgrade_pin_permit") > 0) return true;
+        for (Map.Entry<String, Integer> e : itemLevels.entrySet()) {
+            if (e.getValue() > 0 && e.getKey().toLowerCase().contains("pin_permit")) return true;
+        }
+        return false;
     }
 
     public boolean hasHephaestusLicense() {
-        return getItemLevel("hephaestus_license") > 0 || getItemLevel("casino_hephaestus_license") > 0;
+        if (getItemLevel("hephaestus_license") > 0 || getItemLevel("casino_hephaestus_license") > 0) return true;
+        for (Map.Entry<String, Integer> e : itemLevels.entrySet()) {
+            if (e.getValue() > 0 && e.getKey().toLowerCase().contains("hephaestus")) return true;
+        }
+        return false;
     }
 
     public String getEquippedUltimate() {

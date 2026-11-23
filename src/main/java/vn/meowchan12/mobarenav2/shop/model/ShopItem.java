@@ -1,8 +1,14 @@
 package vn.meowchan12.mobarenav2.shop.model;
 
 import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
+
 import java.util.List;
 
+/**
+ * [v8.4.5]: 100% Dynamic Data-Driven Shop Item Model.
+ * Encapsulates purchase costs, level progressions, and custom YAML parameters.
+ */
 public class ShopItem {
 
     private final String id;
@@ -32,11 +38,14 @@ public class ShopItem {
     // Output Actions (commands, permissions, sounds)
     private final List<String> outputActions;
 
+    // Dynamic Configuration Section (allows reading arbitrary settings without hardcoding)
+    private final ConfigurationSection section;
+
     public ShopItem(String id, String categoryId, int slot, String displayName, Material material, List<String> lore,
                     String priceType, double baseCost, double costMultiplier, int maxLevel,
                     String attributeName, double baseValue, double incrementValue,
                     String inputCheckPlaceholder, double inputCheckRequiredValue, String inputCheckFailMessage,
-                    String inputTakeCommand, List<String> outputActions) {
+                    String inputTakeCommand, List<String> outputActions, ConfigurationSection section) {
         this.id = id;
         this.categoryId = categoryId;
         this.slot = slot;
@@ -55,6 +64,17 @@ public class ShopItem {
         this.inputCheckFailMessage = inputCheckFailMessage;
         this.inputTakeCommand = inputTakeCommand;
         this.outputActions = outputActions;
+        this.section = section;
+    }
+
+    public ShopItem(String id, String categoryId, int slot, String displayName, Material material, List<String> lore,
+                    String priceType, double baseCost, double costMultiplier, int maxLevel,
+                    String attributeName, double baseValue, double incrementValue,
+                    String inputCheckPlaceholder, double inputCheckRequiredValue, String inputCheckFailMessage,
+                    String inputTakeCommand, List<String> outputActions) {
+        this(id, categoryId, slot, displayName, material, lore, priceType, baseCost, costMultiplier, maxLevel,
+             attributeName, baseValue, incrementValue, inputCheckPlaceholder, inputCheckRequiredValue,
+             inputCheckFailMessage, inputTakeCommand, outputActions, null);
     }
 
     public String getId() { return id; }
@@ -75,6 +95,31 @@ public class ShopItem {
     public String getInputCheckFailMessage() { return inputCheckFailMessage; }
     public String getInputTakeCommand() { return inputTakeCommand; }
     public List<String> getOutputActions() { return outputActions; }
+    public ConfigurationSection getSection() { return section; }
+
+    public boolean getBooleanSetting(String key, boolean def) {
+        return (section != null && section.contains(key)) ? section.getBoolean(key) : def;
+    }
+
+    public int getIntSetting(String key, int def) {
+        return (section != null && section.contains(key)) ? section.getInt(key) : def;
+    }
+
+    public double getDoubleSetting(String key, double def) {
+        return (section != null && section.contains(key)) ? section.getDouble(key) : def;
+    }
+
+    public String getStringSetting(String key, String def) {
+        return (section != null && section.contains(key)) ? section.getString(key) : def;
+    }
+
+    public boolean isConsumable() {
+        return getBooleanSetting("consumable", id.equalsIgnoreCase("reroll_ticket"));
+    }
+
+    public boolean isConfirmationRequired() {
+        return getBooleanSetting("confirm-purchase", false);
+    }
 
     public double calculateCostForLevel(int targetLevel) {
         if (targetLevel <= 1) return baseCost;

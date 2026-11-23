@@ -252,3 +252,34 @@ support-mobs:
     pulse-interval-seconds: 5
     buff-duration-seconds: 10
     max-strength-cap: -1 # -1 = No Cap (Infinite Stacking)
+
+# ==========================================
+# [v8.4.5] GLOBAL SHOP SYSTEM CONFIGURATION
+# ==========================================
+shop:
+  # Customizable Currency Names used in chat, tooltips, and confirmation prompts
+  currency-names:
+    vault: "Vault Money"
+    playerpoints: "PlayerPoints"
+    custom_command: "Casino Chips"
+
+  # Confirmation Dialog Settings
+  # Any purchase at or above these thresholds requires double-clicking within timeout
+  confirmation-thresholds:
+    vault: 1000000.0
+    playerpoints: 1000.0
+    custom_command: 1000.0
+  confirmation-timeout-ms: 3000
+
+  # GUI Styling & Aesthetic Configs
+  gui:
+    main-title: "&0&l📜 MOBARENA GLOBAL SHOP"
+    main-filler: "BLACK_STAINED_GLASS_PANE"
+    guide-title: "&0&l📖 SHOP UPGRADE GUIDE"
+    guide-filler: "LIGHT_BLUE_STAINED_GLASS_PANE"
+    category-filler: "GRAY_STAINED_GLASS_PANE"
+
+  # Ultimates Combat Tuning
+  ultimates:
+    max-cooldown-reduction: 0.25 # Max 25% cooldown reduction cap from custom stats
+

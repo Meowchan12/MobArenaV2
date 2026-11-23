@@ -16,6 +16,7 @@ import vn.meowchan12.mobarenav2.MobArenav2;
 import vn.meowchan12.mobarenav2.utils.ParticleUtils;
 import vn.meowchan12.mobarenav2.arena.Arena;
 import vn.meowchan12.mobarenav2.shop.model.PlayerShopData;
+import vn.meowchan12.mobarenav2.shop.model.ShopItem;
 import vn.meowchan12.mobarenav2.utils.AttributeUtils;
 
 import java.util.HashSet;
@@ -113,30 +114,34 @@ public class UltimateManager {
             return false;
         }
 
-        // Apply cooldown reduction from Shop (CUSTOM_COOLDOWN_REDUCE, max 25%)
+        // Apply cooldown reduction from Shop (CUSTOM_COOLDOWN_REDUCE, configurable cap)
+        double maxCdReduction = plugin.getConfig().getDouble("shop.ultimates.max-cooldown-reduction", 0.25);
         double cdReduction = (plugin.getShopManager() != null) ? plugin.getShopManager().getCustomStatBonus(player.getUniqueId(), "CUSTOM_COOLDOWN_REDUCE") : 0.0;
-        double reductionFactor = 1.0 - Math.min(0.25, cdReduction / 100.0);
+        double reductionFactor = 1.0 - Math.min(maxCdReduction, cdReduction / 100.0);
 
         switch (chosen) {
             case "dash" -> {
-                int baseCd = 25;
+                ShopItem dashItem = (plugin.getShopManager() != null) ? plugin.getShopManager().getShopItem("shadow_dash_ultimate") : null;
+                int baseCd = (dashItem != null) ? dashItem.getIntSetting("cooldown", 25) : 25;
                 long actualCd = Math.round(baseCd * reductionFactor);
                 setCooldown(player.getUniqueId(), "dash", actualCd);
-                castShadowDash(player, arena, actualCd);
+                castShadowDash(player, arena, actualCd, dashItem);
                 return true;
             }
             case "beacon" -> {
-                int baseCd = 45;
+                ShopItem beaconItem = (plugin.getShopManager() != null) ? plugin.getShopManager().getShopItem("rallying_beacon_ultimate") : null;
+                int baseCd = (beaconItem != null) ? beaconItem.getIntSetting("cooldown", 45) : 45;
                 long actualCd = Math.round(baseCd * reductionFactor);
                 setCooldown(player.getUniqueId(), "beacon", actualCd);
-                castRallyingBeacon(player, arena, actualCd);
+                castRallyingBeacon(player, arena, actualCd, beaconItem);
                 return true;
             }
             case "stasis" -> {
-                int baseCd = 60;
+                ShopItem stasisItem = (plugin.getShopManager() != null) ? plugin.getShopManager().getShopItem("stasis_aegis_ultimate") : null;
+                int baseCd = (stasisItem != null) ? stasisItem.getIntSetting("cooldown", 60) : 60;
                 long actualCd = Math.round(baseCd * reductionFactor);
                 setCooldown(player.getUniqueId(), "stasis", actualCd);
-                castStasisAegis(player, arena, actualCd);
+                castStasisAegis(player, arena, actualCd, stasisItem);
                 return true;
             }
         }
@@ -144,8 +149,9 @@ public class UltimateManager {
         return false;
     }
 
-    private void castShadowDash(Player player, Arena arena, long cd) {
-        Vector dir = player.getLocation().getDirection().normalize().multiply(1.6);
+    private void castShadowDash(Player player, Arena arena, long cd, ShopItem item) {
+        double velocityMult = (item != null) ? item.getDoubleSetting("dash-velocity", 1.6) : 1.6;
+        Vector dir = player.getLocation().getDirection().normalize().multiply(velocityMult);
         dir.setY(0.2);
         player.setVelocity(dir);
 
@@ -156,14 +162,22 @@ public class UltimateManager {
 
         player.sendActionBar(Component.text("§b§l✔ [SHADOW DASH] §fDashed forward! Stunned nearby enemies! (CD: " + cd + "s)"));
 
+        double radius = (item != null) ? item.getDoubleSetting("radius", 4.5) : 4.5;
+        double radiusY = (item != null) ? item.getDoubleSetting("radius-y", 3.0) : 3.0;
+        double damage = (item != null) ? item.getDoubleSetting("damage", 15.0) : 15.0;
+        int slowTicks = (item != null) ? item.getIntSetting("slowness-ticks", 40) : 40;
+        int slowAmp = (item != null) ? item.getIntSetting("slowness-amplifier", 9) : 9;
+        int weakTicks = (item != null) ? item.getIntSetting("weakness-ticks", 40) : 40;
+        int weakAmp = (item != null) ? item.getIntSetting("weakness-amplifier", 4) : 4;
+
         BukkitRunnable stunTask = new BukkitRunnable() {
             @Override
             public void run() {
-                for (Entity e : player.getNearbyEntities(4.5, 3.0, 4.5)) {
+                for (Entity e : player.getNearbyEntities(radius, radiusY, radius)) {
                     if (e instanceof LivingEntity mob && mob.hasMetadata("MA_MOB") && !mob.isDead()) {
-                        mob.damage(15.0, player);
-                        mob.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 9, false, true));
-                        mob.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 40, 4, false, true));
+                        mob.damage(damage, player);
+                        mob.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, slowTicks, slowAmp, false, true));
+                        mob.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, weakTicks, weakAmp, false, true));
                         spawnSafeFlash(mob.getWorld(), mob.getLocation().add(0, 1, 0));
                     }
                 }
@@ -180,7 +194,7 @@ public class UltimateManager {
         } catch (Throwable ignored) {}
     }
 
-    private void castRallyingBeacon(Player player, Arena arena, long cd) {
+    private void castRallyingBeacon(Player player, Arena arena, long cd, ShopItem item) {
         Location beaconLoc = player.getLocation().clone();
         player.getWorld().playSound(beaconLoc, Sound.BLOCK_BEACON_ACTIVATE, 1.2f, 1.2f);
         player.getWorld().playSound(beaconLoc, Sound.ITEM_TOTEM_USE, 0.8f, 1.6f);
@@ -188,12 +202,18 @@ public class UltimateManager {
         arena.broadcastMessage("§e§l✦ [RALLYING BEACON] §f" + player.getName() + " planted a Holy Banner! (Restoring HP to nearby allies)");
         player.sendActionBar(Component.text("§e§l✔ [RALLYING BEACON] §fHoly Banner Planted! (CD: " + cd + "s)"));
 
+        int totalTicks = (item != null) ? item.getIntSetting("duration-ticks", 200) : 200; // 10s default
+        double radius = (item != null) ? item.getDoubleSetting("radius", 6.0) : 6.0;
+        double radiusSq = radius * radius;
+        double healPercent = (item != null) ? item.getDoubleSetting("heal-percent", 0.05) : 0.05;
+        int resTicks = (item != null) ? item.getIntSetting("resistance-ticks", 40) : 40;
+
         new BukkitRunnable() {
             int ticks = 0;
 
             @Override
             public void run() {
-                if (!arena.isRunning() || ticks >= 200) { // 10 seconds total
+                if (!arena.isRunning() || ticks >= totalTicks) {
                     cancel();
                     return;
                 }
@@ -205,12 +225,12 @@ public class UltimateManager {
                 // Heal every 20 ticks (1s)
                 if (ticks % 20 == 0) {
                     for (Player ally : arena.getPlayersAsObjects()) {
-                        if (ally.getLocation().distanceSquared(beaconLoc) <= 36.0) { // 6 blocks
+                        if (ally.getLocation().distanceSquared(beaconLoc) <= radiusSq) {
                             AttributeInstance maxHpAttr = ally.getAttribute(AttributeUtils.MAX_HEALTH);
                             double maxHp = (maxHpAttr != null) ? maxHpAttr.getValue() : 20.0;
-                            double heal = maxHp * 0.05; // 5% per second = 50% over 10s
+                            double heal = maxHp * healPercent;
                             ally.setHealth(Math.min(maxHp, ally.getHealth() + heal));
-                            ally.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 40, 0, false, false));
+                            ally.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, resTicks, 0, false, false));
                             ally.getWorld().spawnParticle(Particle.HEART, ally.getLocation().add(0, 1.8, 0), 3, 0.2, 0.2, 0.2, 0.05);
                         }
                     }
@@ -221,16 +241,26 @@ public class UltimateManager {
         }.runTaskTimer(plugin, 0L, 10L);
     }
 
-    private void castStasisAegis(Player player, Arena arena, long cd) {
+    private void castStasisAegis(Player player, Arena arena, long cd, ShopItem item) {
         UUID uuid = player.getUniqueId();
         stasisImmunePlayers.add(uuid);
 
+        int durationTicks = (item != null) ? item.getIntSetting("duration-ticks", 60) : 60; // 3s default
+        int durationSec = Math.max(1, durationTicks / 20);
+
         player.getWorld().playSound(player.getLocation(), Sound.BLOCK_GLASS_BREAK, 1.0f, 0.7f);
         player.getWorld().playSound(player.getLocation(), Sound.BLOCK_BEACON_POWER_SELECT, 1.0f, 1.5f);
-        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 60, 99, false, false));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, 60, 99, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, durationTicks, 99, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, durationTicks, 99, false, false));
 
-        player.sendActionBar(Component.text("§3§l✔ [STASIS AEGIS] §bInvulnerable for 3s! (CD: " + cd + "s)"));
+        player.sendActionBar(Component.text("§3§l✔ [STASIS AEGIS] §bInvulnerable for " + durationSec + "s! (CD: " + cd + "s)"));
+
+        double burstRadius = (item != null) ? item.getDoubleSetting("burst-radius", 7.0) : 7.0;
+        double burstRadiusY = (item != null) ? item.getDoubleSetting("burst-radius-y", 4.0) : 4.0;
+        double burstDmg = (item != null) ? item.getDoubleSetting("burst-damage", 20.0) : 20.0;
+        double knockback = (item != null) ? item.getDoubleSetting("knockback", 1.4) : 1.4;
+        int slowTicks = (item != null) ? item.getIntSetting("slowness-ticks", 80) : 80;
+        int slowAmp = (item != null) ? item.getIntSetting("slowness-amplifier", 2) : 2;
 
         new BukkitRunnable() {
             int ticks = 0;
@@ -246,7 +276,7 @@ public class UltimateManager {
                 // Swirling snowflakes
                 player.getWorld().spawnParticle(Particle.SNOWFLAKE, player.getLocation().add(0, 1, 0), 12, 0.5, 0.7, 0.5, 0.05);
 
-                if (ticks >= 60) { // 3 seconds ended
+                if (ticks >= durationTicks) {
                     stasisImmunePlayers.remove(uuid);
 
                     // Icy shockwave burst
@@ -255,12 +285,12 @@ public class UltimateManager {
                     loc.getWorld().spawnParticle(Particle.SNOWFLAKE, loc, 60, 2.0, 1.0, 2.0, 0.15);
                     player.playSound(loc, Sound.ITEM_SHIELD_BLOCK, 1.2f, 0.6f);
 
-                    for (Entity near : player.getNearbyEntities(7.0, 4.0, 7.0)) {
+                    for (Entity near : player.getNearbyEntities(burstRadius, burstRadiusY, burstRadius)) {
                         if (near instanceof LivingEntity mob && mob.hasMetadata("MA_MOB") && !mob.isDead()) {
-                            Vector knock = mob.getLocation().toVector().subtract(loc.toVector()).normalize().multiply(1.4).setY(0.35);
+                            Vector knock = mob.getLocation().toVector().subtract(loc.toVector()).normalize().multiply(knockback).setY(0.35);
                             mob.setVelocity(knock);
-                            mob.damage(20.0, player);
-                            mob.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 80, 2, false, true));
+                            mob.damage(burstDmg, player);
+                            mob.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, slowTicks, slowAmp, false, true));
                         }
                     }
 

@@ -21,32 +21,73 @@ import vn.meowchan12.mobarenav2.shop.model.ShopItem;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * [v8.4.5]: 100% Data-Driven Dynamic Shop GUI System.
+ * Fully configurable titles, glass fillers, confirmation thresholds, dynamic currency names,
+ * and dynamically populated Shop Guide menus derived straight from YAML definitions.
+ */
 public class ShopGUI implements Listener {
 
     private final MobArenav2 plugin;
     private final ShopManager shopManager;
 
-    private static final java.util.Map<java.util.UUID, String> pendingConfirmations = new java.util.concurrent.ConcurrentHashMap<>();
-    private static final java.util.Map<java.util.UUID, Long> confirmationTimes = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<UUID, String> pendingConfirmations = new ConcurrentHashMap<>();
+    private static final Map<UUID, Long> confirmationTimes = new ConcurrentHashMap<>();
 
     public ShopGUI(MobArenav2 plugin, ShopManager shopManager) {
         this.plugin = plugin;
         this.shopManager = shopManager;
     }
 
-    public static void openMainShop(Player player, MobArenav2 plugin) {
-        ShopManager manager = plugin.getShopManager();
-        if (manager == null) return;
+    public static String getCurrencyDisplayName(MobArenav2 plugin, String priceType) {
+        if (priceType == null) return "Coins";
+        String pt = priceType.toLowerCase();
+        if (plugin.getConfig().contains("shop.currency-names." + pt)) {
+            return plugin.getConfig().getString("shop.currency-names." + pt);
+        }
+        if (priceType.equalsIgnoreCase("VAULT")) return "Vault Money";
+        if (priceType.equalsIgnoreCase("PLAYERPOINTS")) return "PlayerPoints";
+        if (priceType.equalsIgnoreCase("CUSTOM_COMMAND")) return "Casino Chips";
+        return priceType;
+    }
 
-        Inventory gui = Bukkit.createInventory(new ShopHolder(null), 54, "§0§l📜 MOBARENA GLOBAL SHOP");
-
-        ItemStack filler = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+    public static ItemStack createFiller(String materialName, Material fallback) {
+        Material mat = fallback;
+        if (materialName != null) {
+            try {
+                mat = Material.valueOf(materialName.toUpperCase());
+            } catch (Exception ignored) {}
+        }
+        ItemStack filler = new ItemStack(mat);
         ItemMeta fMeta = filler.getItemMeta();
         if (fMeta != null) {
             fMeta.setDisplayName(" ");
             filler.setItemMeta(fMeta);
         }
+        return filler;
+    }
+
+    private static String colorize(String text) {
+        if (text == null) return "";
+        return org.bukkit.ChatColor.translateAlternateColorCodes('&', text);
+    }
+
+    // =====================================================================
+    // MAIN SHOP MENU
+    // =====================================================================
+    public static void openMainShop(Player player, MobArenav2 plugin) {
+        ShopManager manager = plugin.getShopManager();
+        if (manager == null) return;
+
+        String title = plugin.getConfig().getString("shop.gui.main-title", "&0&l📜 MOBARENA GLOBAL SHOP");
+        Inventory gui = Bukkit.createInventory(new ShopHolder(null), 54, colorize(title));
+
+        String fillerMat = plugin.getConfig().getString("shop.gui.main-filler", "BLACK_STAINED_GLASS_PANE");
+        ItemStack filler = createFiller(fillerMat, Material.BLACK_STAINED_GLASS_PANE);
         for (int i = 0; i < 54; i++) {
             gui.setItem(i, filler);
         }
@@ -77,6 +118,8 @@ public class ShopGUI implements Listener {
             List<String> guideLore = new ArrayList<>();
             guideLore.add("§7Click to view detailed information");
             guideLore.add("§7about each shop upgrade and special.");
+            guideLore.add(" ");
+            guideLore.add("§e➡ Click to open guide");
             gMeta.setLore(guideLore);
             NamespacedKey guideKey = new NamespacedKey(plugin, "shop_guide_btn");
             gMeta.getPersistentDataContainer().set(guideKey, PersistentDataType.STRING, "guide");
@@ -96,75 +139,76 @@ public class ShopGUI implements Listener {
         player.openInventory(gui);
     }
 
+    // =====================================================================
+    // DYNAMIC SHOP GUIDE MENU (Generated directly from Shop Items)
+    // =====================================================================
     public static void openGuideMenu(Player player, MobArenav2 plugin) {
-        Inventory gui = Bukkit.createInventory(new ShopHolder("guide"), 54, "§0§l📖 SHOP UPGRADE GUIDE");
-        
-        ItemStack filler = new ItemStack(Material.LIGHT_BLUE_STAINED_GLASS_PANE);
-        ItemMeta fMeta = filler.getItemMeta();
-        if (fMeta != null) { fMeta.setDisplayName(" "); filler.setItemMeta(fMeta); }
-        for (int i = 0; i < 54; i++) gui.setItem(i, filler);
-        
-        // Base Stats Guide
-        gui.setItem(10, createGuideItem(Material.RED_CONCRETE, "§c§lHeart of Steel (HP)",
-            "§7Increases your Base Max HP.",
-            "§7This bonus is applied as a Bukkit attribute,",
-            "§7meaning it survives Totem of Undying pops!",
-            "§ePer Level: §a+2.0 HP §7| §eMax: Lv.10 (+20 HP)"));
-        
-        gui.setItem(12, createGuideItem(Material.IRON_CHESTPLATE, "§7§lIron Bulwark (Armor)",
-            "§7Increases your Base Armor points.",
-            "§7Reduces incoming physical damage.",
-            "§ePer Level: §b+1.5 Armor §7| §eMax: Lv.5 (+7.5)"));
-        
-        gui.setItem(14, createGuideItem(Material.NETHERITE_SWORD, "§c§lTitan Strength (DMG)",
-            "§7Increases your Base Melee Damage.",
-            "§7Stacks with weapon damage and enchantments.",
-            "§ePer Level: §c+1.5 DMG §7| §eMax: Lv.5 (+7.5)"));
-        
-        // Advanced Stats Guide
-        gui.setItem(20, createGuideItem(Material.FEATHER, "§6§lPhantom Reflexes (Dodge)",
-            "§7Increases your chance to completely dodge attacks.",
-            "§7Stacks with the Upgrade System's dodge chance.",
-            "§ePer Level: §a+0.2% §7| §eMax: Lv.6 (+1.2%)"));
-        
-        gui.setItem(22, createGuideItem(Material.CLOCK, "§b§lTemporal Mastery (Cooldown)",
-            "§7Reduces cooldown of all special abilities.",
-            "§7Affects upgrade cooldowns and special skills.",
-            "§ePer Level: §b-5% CD §7| §eMax: Lv.5 (-25%)"));
-        
-        gui.setItem(24, createGuideItem(Material.REDSTONE, "§c§lBlood Pact (Lifesteal)",
-            "§7Increases your lifesteal trigger chance.",
-            "§7Stacks with Vampiric Strike upgrade.",
-            "§ePer Level: §c+0.5% §7| §eMax: Lv.3 (+1.5%)"));
-        
-        gui.setItem(30, createGuideItem(Material.GOLDEN_SWORD, "§6§lPrecision Edge (Crit)",
-            "§7Increases your critical strike chance.",
-            "§7Stacks with Critical Strike upgrade.",
-            "§ePer Level: §6+0.3% §7| §eMax: Lv.3 (+0.9%)"));
-        
-        gui.setItem(32, createGuideItem(Material.NETHERITE_INGOT, "§9§lAdamantine Skin (Toughness)",
-            "§7Increases your Armor Toughness.",
-            "§7Reduces effectiveness of high-damage attacks.",
-            "§ePer Level: §9+0.5 §7| §eMax: Lv.4 (+2.0)"));
-        
-        // Ultimates Guide
-        gui.setItem(38, createGuideItem(Material.FEATHER, "§b§lShadow Dash Ultimate",
-            "§7Active: Dash forward 8 blocks,",
-            "§7stunning all mobs in your trajectory.",
-            "§eCooldown: §c25s §7| §ePrice: 5000 PlayerPoints"));
-        
-        gui.setItem(40, createGuideItem(Material.GOLDEN_APPLE, "§e§lRallying Beacon Ultimate",
-            "§7Active: Plant a Holy Banner that restores",
-            "§730% Max HP to all nearby teammates.",
-            "§eCooldown: §c45s §7| §ePrice: 8000 PlayerPoints"));
-        
-        gui.setItem(42, createGuideItem(Material.SHIELD, "§3§lStasis Aegis Ultimate",
-            "§7Active: Freeze yourself in stasis for 3s.",
-            "§7You become 100% invulnerable, then burst",
-            "§7an icy shockwave when stasis ends.",
-            "§eCooldown: §c60s §7| §ePrice: 10000 PlayerPoints"));
-        
-        // Back button
+        ShopManager manager = plugin.getShopManager();
+        if (manager == null) return;
+
+        String title = plugin.getConfig().getString("shop.gui.guide-title", "&0&l📖 SHOP UPGRADE GUIDE");
+        Inventory gui = Bukkit.createInventory(new ShopHolder("guide"), 54, colorize(title));
+
+        String fillerMat = plugin.getConfig().getString("shop.gui.guide-filler", "LIGHT_BLUE_STAINED_GLASS_PANE");
+        ItemStack filler = createFiller(fillerMat, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
+        for (int i = 0; i < 54; i++) {
+            gui.setItem(i, filler);
+        }
+
+        // Available slots for guide cards across 4 rows
+        int[] guideSlots = {
+            10, 11, 12, 13, 14, 15, 16,
+            19, 20, 21, 22, 23, 24, 25,
+            28, 29, 30, 31, 32, 33, 34,
+            37, 38, 39, 40, 41, 42, 43
+        };
+
+        int slotIdx = 0;
+        for (ShopItem item : manager.getShopItems().values()) {
+            if (slotIdx >= guideSlots.length) break;
+
+            ItemStack gItem = new ItemStack(item.getMaterial());
+            ItemMeta meta = gItem.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName(item.getDisplayName());
+                List<String> lore = new ArrayList<>();
+
+                // Include clean descriptive lore from item definition
+                for (String line : item.getLore()) {
+                    if (line.contains("%cost%") || line.contains("%current_level%")) continue;
+                    lore.add(line);
+                }
+
+                lore.add(" ");
+                if (item.getMaxLevel() > 1) {
+                    lore.add("§eMax Level: §f" + item.getMaxLevel());
+                    if (item.getAttributeName() != null) {
+                        lore.add("§ePer Level: §a+" + String.format(java.util.Locale.US, "%.1f", item.getIncrementValue())
+                                + " §7| §eMax: §a+" + String.format(java.util.Locale.US, "%.1f", item.calculateStatForLevel(item.getMaxLevel())));
+                    }
+                }
+
+                String cur = getCurrencyDisplayName(plugin, item.getPriceType());
+                lore.add("§eBase Cost: §6" + String.format(java.util.Locale.US, "%,.0f", item.getBaseCost()) + " " + cur);
+
+                if (item.getCategoryId().equalsIgnoreCase("ultimates")) {
+                    int cd = item.getIntSetting("cooldown", 0);
+                    if (cd > 0) lore.add("§bCooldown: §e" + cd + " Seconds");
+                }
+
+                lore.add(" ");
+                lore.add("§a➡ Click to jump to this Shop Category!");
+
+                NamespacedKey catKey = new NamespacedKey(plugin, "shop_category_id");
+                meta.getPersistentDataContainer().set(catKey, PersistentDataType.STRING, item.getCategoryId());
+                meta.setLore(lore);
+                gItem.setItemMeta(meta);
+            }
+
+            gui.setItem(guideSlots[slotIdx++], gItem);
+        }
+
+        // Navigation
         ItemStack backBtn = new ItemStack(Material.ARROW);
         ItemMeta bMeta = backBtn.getItemMeta();
         if (bMeta != null) {
@@ -172,7 +216,7 @@ public class ShopGUI implements Listener {
             backBtn.setItemMeta(bMeta);
         }
         gui.setItem(48, backBtn);
-        
+
         ItemStack closeBtn = new ItemStack(Material.BARRIER);
         ItemMeta cMeta = closeBtn.getItemMeta();
         if (cMeta != null) {
@@ -180,23 +224,13 @@ public class ShopGUI implements Listener {
             closeBtn.setItemMeta(cMeta);
         }
         gui.setItem(49, closeBtn);
-        
+
         player.openInventory(gui);
     }
 
-    private static ItemStack createGuideItem(Material mat, String name, String... loreLines) {
-        ItemStack item = new ItemStack(mat);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(name);
-            List<String> lore = new ArrayList<>();
-            for (String line : loreLines) lore.add(line);
-            meta.setLore(lore);
-            item.setItemMeta(meta);
-        }
-        return item;
-    }
-
+    // =====================================================================
+    // CATEGORY SHOP MENU
+    // =====================================================================
     public static void openCategoryShop(Player player, String categoryId, MobArenav2 plugin) {
         ShopManager manager = plugin.getShopManager();
         if (manager == null) return;
@@ -204,14 +238,10 @@ public class ShopGUI implements Listener {
         ShopCategory category = manager.getCategories().get(categoryId.toLowerCase());
         String title = (category != null) ? category.getDisplayName() : "§0§lMOBARENA SHOP";
 
-        Inventory gui = Bukkit.createInventory(new ShopHolder(categoryId), 54, title);
+        Inventory gui = Bukkit.createInventory(new ShopHolder(categoryId), 54, colorize(title));
 
-        ItemStack filler = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
-        ItemMeta fMeta = filler.getItemMeta();
-        if (fMeta != null) {
-            fMeta.setDisplayName(" ");
-            filler.setItemMeta(fMeta);
-        }
+        String fillerMat = plugin.getConfig().getString("shop.gui.category-filler", "GRAY_STAINED_GLASS_PANE");
+        ItemStack filler = createFiller(fillerMat, Material.GRAY_STAINED_GLASS_PANE);
         for (int i = 0; i < 54; i++) {
             gui.setItem(i, filler);
         }
@@ -229,32 +259,43 @@ public class ShopGUI implements Listener {
             double currentStat = item.calculateStatForLevel(currentLvl);
             double nextStat = item.calculateStatForLevel(nextLvl);
 
-            boolean isTicket = item.getId().equalsIgnoreCase("reroll_ticket");
-            String currencyName = item.getPriceType().equalsIgnoreCase("CUSTOM_COMMAND") ? "Casino Chips"
-                    : (item.getPriceType().equalsIgnoreCase("VAULT") ? "Vault Money" : item.getPriceType());
+            boolean isConsumable = item.isConsumable();
+            String currencyName = getCurrencyDisplayName(plugin, item.getPriceType());
 
             ItemStack icon = new ItemStack(item.getMaterial());
             ItemMeta meta = icon.getItemMeta();
             if (meta != null) {
-                if (isTicket) {
+                if (isConsumable && item.getId().toLowerCase().contains("ticket")) {
                     meta.setDisplayName(item.getDisplayName() + " §8[Held: §e" + shopData.getRerollTickets() + " Tickets§8]");
                 } else {
                     meta.setDisplayName(item.getDisplayName() + " §8[Lv." + currentLvl + "/" + item.getMaxLevel() + "]");
                 }
+
+                int cdVal = item.getIntSetting("cooldown", 0);
+                double dmgVal = item.getDoubleSetting("damage", item.getDoubleSetting("burst-damage", 0.0));
+                double radVal = item.getDoubleSetting("radius", item.getDoubleSetting("burst-radius", 0.0));
+                int durSec = item.getIntSetting("duration-ticks", 0) / 20;
+                int healPct = (int) (item.getDoubleSetting("heal-percent", 0.0) * 100);
 
                 List<String> formattedLore = new ArrayList<>();
                 for (String line : item.getLore()) {
                     String formatted = line
                             .replace("%current_level%", String.valueOf(currentLvl))
                             .replace("%max_level%", String.valueOf(item.getMaxLevel()))
-                            .replace("%cost%", String.format("%.0f", currentCost))
-                            .replace("%current_value%", String.format("%.1f", currentStat))
-                            .replace("%next_value%", String.format("%.1f", nextStat));
-                    formattedLore.add(formatted);
+                            .replace("%cost%", String.format(java.util.Locale.US, "%,.0f", currentCost))
+                            .replace("%current_value%", String.format(java.util.Locale.US, "%.1f", currentStat))
+                            .replace("%next_value%", String.format(java.util.Locale.US, "%.1f", nextStat))
+                            .replace("%cooldown%", String.valueOf(cdVal))
+                            .replace("%damage%", String.format(java.util.Locale.US, "%.1f", dmgVal))
+                            .replace("%radius%", String.format(java.util.Locale.US, "%.1f", radVal))
+                            .replace("%duration%", String.valueOf(durSec))
+                            .replace("%heal_percent%", String.valueOf(healPct))
+                            .replace("%currency%", currencyName);
+                    formattedLore.add(colorize(formatted));
                 }
 
                 formattedLore.add(" ");
-                if (!isTicket && isMaxed) {
+                if (!isConsumable && isMaxed) {
                     if (categoryId.equalsIgnoreCase("ultimates")) {
                         boolean isEquipped = item.getId().equalsIgnoreCase(shopData.getEquippedUltimate());
                         if (isEquipped) {
@@ -269,9 +310,9 @@ public class ShopGUI implements Listener {
                         formattedLore.add("§a✔ MAXED OUT!");
                     }
                 } else {
-                    formattedLore.add("§ePrice: §6" + String.format("%,.0f", currentCost) + " " + currencyName);
-                    if (isTicket) {
-                        formattedLore.add("§a➡ Click to Purchase 1x Reroll Ticket");
+                    formattedLore.add("§ePrice: §6" + String.format(java.util.Locale.US, "%,.0f", currentCost) + " " + currencyName);
+                    if (isConsumable) {
+                        formattedLore.add("§a➡ Click to Purchase 1x " + item.getDisplayName());
                     } else {
                         formattedLore.add("§a➡ Click to Upgrade to Lv." + nextLvl);
                     }
@@ -425,21 +466,29 @@ public class ShopGUI implements Listener {
                         int nextLvl = shopData.getItemLevel(item.getId()) + 1;
                         double cost = item.calculateCostForLevel(nextLvl);
 
-                        boolean isExpensive = (item.getPriceType().equals("VAULT") && cost >= 1000000.0)
-                                || (item.getPriceType().equals("PLAYERPOINTS") && cost >= 1000.0);
+                        // Configurable thresholds for confirmation
+                        double vThresh = plugin.getConfig().getDouble("shop.confirmation-thresholds.vault", 1000000.0);
+                        double ppThresh = plugin.getConfig().getDouble("shop.confirmation-thresholds.playerpoints", 1000.0);
+                        double ccThresh = plugin.getConfig().getDouble("shop.confirmation-thresholds.custom-command", 1000.0);
+                        long timeoutMs = plugin.getConfig().getLong("shop.confirmation-timeout-ms", 3000L);
 
-                        java.util.UUID puuid = player.getUniqueId();
-                        if (isExpensive && nextLvl <= item.getMaxLevel()) {
+                        boolean isExpensive = item.isConfirmationRequired()
+                                || (item.getPriceType().equalsIgnoreCase("VAULT") && cost >= vThresh)
+                                || (item.getPriceType().equalsIgnoreCase("PLAYERPOINTS") && cost >= ppThresh)
+                                || (item.getPriceType().equalsIgnoreCase("CUSTOM_COMMAND") && cost >= ccThresh);
+
+                        UUID puuid = player.getUniqueId();
+                        if (isExpensive && (item.isConsumable() || nextLvl <= item.getMaxLevel())) {
                             String pending = pendingConfirmations.get(puuid);
                             Long pTime = confirmationTimes.get(puuid);
                             long now = System.currentTimeMillis();
 
-                            if (pending == null || !pending.equalsIgnoreCase(itemId) || pTime == null || now - pTime > 3000) {
+                            if (pending == null || !pending.equalsIgnoreCase(itemId) || pTime == null || (now - pTime > timeoutMs)) {
                                 pendingConfirmations.put(puuid, itemId);
                                 confirmationTimes.put(puuid, now);
                                 player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_BELL, 1.0f, 1.5f);
-                                String cur = item.getPriceType().equalsIgnoreCase("CUSTOM_COMMAND") ? "Casino Chips" : (item.getPriceType().equalsIgnoreCase("VAULT") ? "Vault Money" : item.getPriceType());
-                                player.sendMessage("§e§l⚠ [SHOP CONFIRMATION] §fThis item costs §6" + String.format("%,.0f", cost) + " " + cur + "§f! Click again within 3s to confirm purchase.");
+                                String cur = getCurrencyDisplayName(plugin, item.getPriceType());
+                                player.sendMessage("§e§l⚠ [SHOP CONFIRMATION] §fThis item costs §6" + String.format(java.util.Locale.US, "%,.0f", cost) + " " + cur + "§f! Click again within " + (timeoutMs / 1000) + "s to confirm purchase.");
                                 return;
                             } else {
                                 pendingConfirmations.remove(puuid);
@@ -470,21 +519,26 @@ public class ShopGUI implements Listener {
         }
         int rerollTickets = 0;
         boolean hasHephaestus = false;
+        boolean hasPinPermit = false;
         if (plugin.getShopManager() != null) {
             PlayerShopData d = plugin.getShopManager().getPlayerData(player.getUniqueId());
             if (d != null) {
                 rerollTickets = d.getRerollTickets();
                 hasHephaestus = d.hasHephaestusLicense();
+                hasPinPermit = d.hasPinPermit();
             }
         }
+
+        String curVault = getCurrencyDisplayName(plugin, "VAULT");
+        String curPP = getCurrencyDisplayName(plugin, "PLAYERPOINTS");
 
         // Slot 45: Vault
         ItemStack vItem = new ItemStack(Material.GOLD_INGOT);
         ItemMeta vMeta = vItem.getItemMeta();
         if (vMeta != null) {
-            vMeta.setDisplayName("§6§lVAULT BALANCE");
+            vMeta.setDisplayName("§6§l" + curVault.toUpperCase() + " BALANCE");
             List<String> lore = new ArrayList<>();
-            lore.add("§7Current Balance: §e$" + String.format("%,.2f", vaultBal));
+            lore.add("§7Current Balance: §e$" + String.format(java.util.Locale.US, "%,.2f", vaultBal));
             vMeta.setLore(lore);
             vItem.setItemMeta(vMeta);
         }
@@ -494,7 +548,7 @@ public class ShopGUI implements Listener {
         ItemStack pItem = new ItemStack(Material.AMETHYST_SHARD);
         ItemMeta pMeta = pItem.getItemMeta();
         if (pMeta != null) {
-            pMeta.setDisplayName("§d§lPLAYERPOINTS");
+            pMeta.setDisplayName("§d§l" + curPP.toUpperCase());
             List<String> lore = new ArrayList<>();
             lore.add("§7Current Points: §b" + ppPoints + " Pts");
             pMeta.setLore(lore);
@@ -502,14 +556,15 @@ public class ShopGUI implements Listener {
         }
         gui.setItem(46, pItem);
 
-        // Slot 47: Tickets
+        // Slot 47: Tickets & Perks
         ItemStack tItem = new ItemStack(Material.NETHER_STAR);
         ItemMeta tMeta = tItem.getItemMeta();
         if (tMeta != null) {
-            tMeta.setDisplayName("§b§lARENA PASSES");
+            tMeta.setDisplayName("§b§lARENA PASSES & UTILITIES");
             List<String> lore = new ArrayList<>();
             lore.add("§7Free Reroll Tickets: §e" + rerollTickets);
             lore.add("§7Hephaestus License: " + (hasHephaestus ? "§a§lUNLOCKED" : "§cLocked"));
+            lore.add("§7Upgrade Pin Permit: " + (hasPinPermit ? "§a§lUNLOCKED" : "§cLocked"));
             tMeta.setLore(lore);
             tItem.setItemMeta(tMeta);
         }

@@ -2,6 +2,8 @@
 # MOBARENA SHOP - SPECIAL ULTIMATE ABILITIES
 # ----------------------------------------------------------
 # Active skills unlocked using PlayerPoints
+# All combat metrics (cooldowns, radii, damage, durations)
+# can be tuned directly here.
 # ==========================================================
 
 category:
@@ -23,14 +25,25 @@ items:
     material: FEATHER
     lore:
       - "&7&m---------------------"
-      - "&fDash forward 8 blocks and stun mobs in your trajectory."
+      - "&fDash forward rapidly and stun mobs in your trajectory."
       - "&eActivation: &bShift + Right-Click weapon"
-      - "&fCooldown: &e25 Seconds"
+      - "&fCooldown: &e%cooldown% Seconds"
+      - "&fDamage: &c%damage% DMG &7| &fRadius: &b%radius%m"
       - "&7&m---------------------"
     price-type: PLAYERPOINTS
     base-cost: 5000.0
     cost-multiplier: 1.0
     max-level: 1
+    # Dynamic combat configuration
+    cooldown: 25
+    damage: 15.0
+    radius: 4.5
+    radius-y: 3.0
+    dash-velocity: 1.6
+    slowness-ticks: 40
+    slowness-amplifier: 9
+    weakness-ticks: 40
+    weakness-amplifier: 4
     output-actions:
       - "permission: add mobarenav2.ultimate.shadowdash"
       - "message: &b[MobArena Shop] Unlocked Shadow Dash Ultimate!"
@@ -43,14 +56,21 @@ items:
     material: GOLDEN_APPLE
     lore:
       - "&7&m---------------------"
-      - "&fPlant a Holy Banner restoring 30% Max HP to all teammates."
+      - "&fPlant a Holy Banner restoring %heal_percent%% Max HP/s to all teammates."
       - "&eActivation: &bShift + Right-Click weapon"
-      - "&fCooldown: &e45 Seconds"
+      - "&fCooldown: &e%cooldown% Seconds"
+      - "&fDuration: &a%duration% Seconds &7| &fRadius: &b%radius%m"
       - "&7&m---------------------"
     price-type: PLAYERPOINTS
     base-cost: 8000.0
     cost-multiplier: 1.0
     max-level: 1
+    # Dynamic combat configuration
+    cooldown: 45
+    duration-ticks: 200
+    radius: 6.0
+    heal-percent: 0.05
+    resistance-ticks: 40
     output-actions:
       - "permission: add mobarenav2.ultimate.rallyingbeacon"
       - "message: &e[MobArena Shop] Unlocked Rallying Beacon Ultimate!"
@@ -63,15 +83,25 @@ items:
     material: SHIELD
     lore:
       - "&7&m---------------------"
-      - "&fFreeze yourself in stasis for 3s (100% Invulnerable)."
+      - "&fFreeze yourself in stasis for %duration%s (100% Invulnerable)."
       - "&fBurst an icy shockwave when stasis ends."
       - "&eActivation: &bShift + Right-Click weapon"
-      - "&fCooldown: &e60 Seconds"
+      - "&fCooldown: &e%cooldown% Seconds"
+      - "&fBurst Damage: &c%damage% DMG &7| &fRadius: &b%radius%m"
       - "&7&m---------------------"
     price-type: PLAYERPOINTS
     base-cost: 10000.0
     cost-multiplier: 1.0
     max-level: 1
+    # Dynamic combat configuration
+    cooldown: 60
+    duration-ticks: 60
+    burst-damage: 20.0
+    burst-radius: 7.0
+    burst-radius-y: 4.0
+    knockback: 1.4
+    slowness-ticks: 80
+    slowness-amplifier: 2
     output-actions:
       - "permission: add mobarenav2.ultimate.stasaegis"
       - "message: &b[MobArena Shop] Unlocked Stasis Aegis Ultimate!"
